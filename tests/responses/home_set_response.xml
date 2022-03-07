@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<D:multistatus xmlns:D="DAV:" xmlns:APPLE="http://apple.com/ns/ical/" xmlns:CAL="urn:ietf:params:xml:ns:caldav" xmlns:CS="http://calendarserver.org/ns/">
+  <D:response>
+    <D:href>/principals/users/1</D:href>
+    <D:propstat>
+      <D:prop>
+        <calendar-home-set xmlns="urn:ietf:params:xml:ns:caldav">
+          <D:href>/caldav/</D:href>
+        </calendar-home-set>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>

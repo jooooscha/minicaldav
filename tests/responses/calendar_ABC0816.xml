@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<D:multistatus xmlns:D="DAV:" xmlns:APPLE="http://apple.com/ns/ical/" xmlns:CAL="urn:ietf:params:xml:ns:caldav" xmlns:CS="http://calendarserver.org/ns/">
+  <D:response>
+    <D:href>/caldav/ABC0816/00000000-0000-0000-0001-000000000000.ics</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:getetag>000</D:getetag>
+        <calendar-data xmlns="urn:ietf:params:xml:ns:caldav">BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Open-Xchange//7.10.6-Rev9//EN
+BEGIN:VEVENT
+  DTSTAMP:20200924T045807Z
+  CLASS:PUBLIC
+  DESCRIPTION:* 01.01.1990
+  DTSTART;VALUE=DATE:19900101
+  DTEND;VALUE=DATE:19900102
+  RRULE:FREQ=YEARLY
+  SEQUENCE:0
+  SUMMARY:&#x1f382; John Doe
+  TRANSP:TRANSPARENT
+  UID:00000000-0000-0000-0001-000000000000
+  X-OX-CONTACT-ID:21
+  X-OX-CONTACT-FOLDER-ID:32
+  X-MOZ-LASTACK:20210531T220000Z
+  BEGIN:VALARM
+    TRIGGER;RELATED=START:-P1D
+    UID:b6bb9669-0ef8-43f1-9b3d-45be4fabe0d6
+    ACTION:EMAIL
+    ACKNOWLEDGED:20210531T220000Z
+    X-APPLE-LOCAL-DEFAULT-ALARM:TRUE
+    X-MOZ-LASTACK:20210531T220000Z
+  END:VALARM
+END:VEVENT
+END:VCALENDAR</calendar-data>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>

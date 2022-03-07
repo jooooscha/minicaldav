@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<D:multistatus xmlns:D="DAV:" xmlns:APPLE="http://apple.com/ns/ical/" xmlns:CAL="urn:ietf:params:xml:ns:caldav" xmlns:CS="http://calendarserver.org/ns/">
+  <D:response>
+    <D:href>/caldav/ABC0815/00000000-0000-0000-0000-000000000000.ics</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:getetag>0000000-00-0000000000000</D:getetag>
+        <calendar-data xmlns="urn:ietf:params:xml:ns:caldav">BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Open-Xchange//7.10.6-Rev9//EN
+BEGIN:VTIMEZONE
+  TZID:Europe/Berlin
+  LAST-MODIFIED:20201011T015911Z
+  TZURL:http://tzurl.org/zoneinfo-outlook/Europe/Berlin
+  X-LIC-LOCATION:Europe/Berlin
+  BEGIN:DAYLIGHT
+    TZNAME:CEST
+    TZOFFSETFROM:+0100
+    TZOFFSETTO:+0200
+    DTSTART:19700329T020000
+    RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU
+  END:DAYLIGHT
+  BEGIN:STANDARD
+    TZNAME:CET
+    TZOFFSETFROM:+0200
+    TZOFFSETTO:+0100
+    DTSTART:19701025T030000
+    RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU
+  END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+  DTSTAMP:19700101T000000Z
+  CLASS:PUBLIC
+  CREATED:20211625T153450Z
+  DTEND;TZID=Europe/Berlin:20220616T160000
+  DTSTART;TZID=Europe/Berlin:20220616T160000
+  LAST-MODIFIED:20211625T153450Z
+  SEQUENCE:0
+  STATUS:CONFIRMED
+  SUMMARY:Event with timezone
+  TRANSP:OPAQUE
+  UID:ba3522ac-bb72-4ce6-9785-9956ec04719c
+  BEGIN:VALARM
+    TRIGGER:-P1D
+    UID:00000000-0000-0000-0000-000000000000
+    ACTION:DISPLAY
+    DESCRIPTION:Event with timezone
+  END:VALARM
+END:VEVENT
+END:VCALENDAR</calendar-data>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/caldav/ABC0815/00000000-0000-0000-0000-000000000001.ics</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:getetag>0000000-00-0000000000000</D:getetag>
+        <calendar-data xmlns="urn:ietf:params:xml:ns:caldav">BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Open-Xchange//7.10.6-Rev9//EN
+BEGIN:VEVENT
+  DTSTAMP:19700101T000000Z
+  CLASS:PUBLIC
+  CREATED:20220117T110045Z
+  DTSTART;VALUE=DATE:20220205
+  DTEND;VALUE=DATE:20220207
+  LAST-MODIFIED:20220117T110045Z
+  SEQUENCE:0
+  STATUS:CONFIRMED
+  SUMMARY:Two day event with alarm
+  TRANSP:OPAQUE
+  UID:00000000-0000-0000-0000-000000000001
+  BEGIN:VALARM
+    TRIGGER:-P1D
+    UID:acce9653-f561-4ae8-a0ee-8405466b42da
+    ACTION:DISPLAY
+    DESCRIPTION:Two day event with alarm
+  END:VALARM
+END:VEVENT
+END:VCALENDAR</calendar-data>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/caldav/ABC0815/00000000-0000-0000-0000-000000000002.ics</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:getetag>0000000-00-0000000000000</D:getetag>
+        <calendar-data xmlns="urn:ietf:params:xml:ns:caldav">BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Open-Xchange//7.10.6-Rev9//EN
+BEGIN:VEVENT
+  DTSTAMP:19700101T000000Z
+  CLASS:PUBLIC
+  CREATED:20220117T190942Z
+  DTEND;VALUE=DATE:20220315
+  DTSTART;VALUE=DATE:20220316
+  LAST-MODIFIED:20220117T190942Z
+  RRULE:FREQ=YEARLY;
+  SEQUENCE:0
+  SUMMARY:Yearly event
+  TRANSP:OPAQUE
+  UID:00000000-0000-0000-0000-000000000002
+END:VEVENT
+END:VCALENDAR</calendar-data>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/caldav/ABC0815/00000000-0000-0000-0000-000000000002.ics</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:getetag>0000000-00-0000000000000</D:getetag>
+        <calendar-data xmlns="urn:ietf:params:xml:ns:caldav">BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Open-Xchange//7.10.6-Rev9//EN
+BEGIN:VEVENT
+  DTSTAMP:19700101T000000Z
+  CLASS:PUBLIC
+  CREATED:20220206T141614Z
+  DTSTART;VALUE=DATE:20220301
+  DTEND;VALUE=DATE:20220302
+  LAST-MODIFIED:20220206T141614Z
+  SEQUENCE:0
+  SUMMARY:Miminal All-Day Event
+  TRANSP:OPAQUE
+  UID:00000000-0000-0000-0000-000000000002
+END:VEVENT
+END:VCALENDAR</calendar-data>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>
