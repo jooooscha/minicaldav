@@ -28,20 +28,16 @@
 //! # Quick Start
 //!
 //! ```rust,no_run
-//! use url::Url;
-//! use ureq::Agent;
-//! pub fn main() {
-//!     let agent = Agent::new();
-//!     let url = Url::parse("http://mycaldav.com/").unwrap();
-//!     let username = "foo";
-//!     let password = "s3cret!";
-//!     let calendars = minicaldav::get_calendars(agent.clone(), username, password, &url).unwrap();
-//!     for calendar in calendars {
-//!         println!("{:?}", calendar);
-//!         let events = minicaldav::get_events(agent.clone(), username, password, &calendar).unwrap();
-//!         for event in events {
-//!             println!("{:?}", event);
-//!         }
+//! let agent = Agent::new();
+//! let url = Url::parse("http://mycaldav.com/").unwrap();
+//! let username = "foo";
+//! let password = "s3cret!";
+//! let calendars = minicaldav::get_calendars(agent.clone(), username, password, &url).unwrap();
+//! for calendar in calendars {
+//!     println!("{:?}", calendar);
+//!     let events = minicaldav::get_events(agent.clone(), username, password, &calendar).unwrap();
+//!     for event in events {
+//!         println!("{:?}", event);
 //!     }
 //! }
 //! ```

@@ -16,6 +16,8 @@
 
 //! Implementation of ICAL parsing.
 
+use std::collections::HashMap;
+
 /// A ICAL container. Can have properties or child ICAL containers.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Ical {
@@ -123,6 +125,7 @@ impl<'a> LineIterator<'a> {
 pub struct Property {
     pub name: String,
     pub value: String,
+    pub attributes: HashMap<String, String>,
 }
 
 impl Property {
@@ -131,13 +134,34 @@ impl Property {
         Self {
             name: name.into(),
             value: value.into(),
+            attributes: HashMap::new(),
+        }
+    }
+
+    /// Creates a new property with attributes
+    pub fn new_with_attributes(name: &str, value: &str, attribs: Vec<(&str, &str)>) -> Self {
+        let mut attributes = HashMap::new();
+        for (k, v) in attribs {
+            attributes.insert(k.into(), v.into());
+        }
+        Self {
+            name: name.into(),
+            value: value.into(),
+            attributes,
         }
     }
 
     /// Parses the given input to a Property instance.
     pub fn parse(input: &str) -> Result<Self, Error> {
         if let Some((name, value)) = input.split_once(':') {
-            Ok(Property::new(name.trim(), value.trim()))
+            let mut parts = name.split(';');
+            let mut property = Property::new(parts.next().unwrap().trim(), value);
+            for part in parts {
+                if let Some((k, v)) = part.split_once('=') {
+                    property.attributes.insert(k.into(), v.into());
+                }
+            }
+            Ok(property)
         } else {
             Err(Error::new(format!(
                 "Property '{}' does not match proper pattern",
@@ -163,7 +187,11 @@ impl Property {
 
 impl From<(String, String)> for Property {
     fn from((name, value): (String, String)) -> Self {
-        Self { name, value }
+        Self {
+            name,
+            value,
+            attributes: HashMap::new(),
+        }
     }
 }
 

@@ -1,5 +1,5 @@
 use minicaldav::caldav::{
-    delete_event, get_calendars, get_events, get_home_set_url, get_principal_url, save_event,
+    remove_event, get_calendars, get_events, get_home_set_url, get_principal_url, save_event,
 };
 use ureq::Agent;
 use url::Url;
@@ -321,7 +321,7 @@ pub fn test_delete_events() {
     event0.data = event0
         .data
         .replace("SUMMARY:Event with timezone", "SUMMARY:Event 1234");
-    delete_event(client.clone(), USERNAME, PASSWORD, event0).expect("Failed to create event");
+    remove_event(client.clone(), USERNAME, PASSWORD, event0).expect("Failed to create event");
 
     mockserver.end();
 }

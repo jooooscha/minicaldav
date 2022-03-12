@@ -356,7 +356,7 @@ pub fn save_event(
 }
 
 /// Delete the given event from the CalDAV server.
-pub fn delete_event(
+pub fn remove_event(
     client: Agent,
     username: &str,
     password: &str,

@@ -16,6 +16,8 @@
 
 //! Main api of minicaldav.
 
+use std::collections::HashMap;
+
 use crate::caldav;
 use crate::ical;
 use ureq::Agent;
@@ -86,8 +88,8 @@ pub fn save_event(
     })
 }
 
-/// Delete the given event on the CalDAV server.
-pub fn delete_event(
+/// Remove the given event on the CalDAV server.
+pub fn remove_event(
     agent: Agent,
     username: &str,
     password: &str,
@@ -98,7 +100,7 @@ pub fn delete_event(
         etag: event.etag,
         url: event.url,
     };
-    caldav::delete_event(agent, username, password, event_ref)?;
+    caldav::remove_event(agent, username, password, event_ref)?;
     Ok(())
 }
 
@@ -140,6 +142,19 @@ impl Event {
             .find_map(|p| if p.name == name { Some(&p.value) } else { None })
     }
 
+    /// Get the value of the given child ical container.
+    pub fn child_property(&self, name: &str, prop: &str) -> Option<&String> {
+        self.ical
+            .children
+            .iter()
+            .find(|c| c.name == name)
+            .and_then(|ical| {
+                ical.properties
+                    .iter()
+                    .find_map(|p| if p.name == prop { Some(&p.value) } else { None })
+            })
+    }
+
     /// Get all properties of this event.
     pub fn properties(&self) -> Vec<(String, String)> {
         self.ical
@@ -152,6 +167,14 @@ impl Event {
     }
     pub fn etag(&self) -> Option<&String> {
         self.etag.as_ref()
+    }
+
+    pub fn builder(url: Url) -> EventBuilder {
+        EventBuilder {
+            url,
+            etag: None,
+            properties: vec![],
+        }
     }
 }
 
@@ -171,5 +194,121 @@ impl From<caldav::Error> for Error {
 impl From<ical::Error> for Error {
     fn from(e: ical::Error) -> Self {
         Error::Caldav(e.message)
+    }
+}
+
+#[derive(Debug)]
+pub struct EventBuilder {
+    url: Url,
+    etag: Option<String>,
+    properties: Vec<ical::Property>,
+}
+
+impl EventBuilder {
+    pub fn build(self) -> Event {
+        Event {
+            etag: self.etag,
+            url: self.url,
+            ical: ical::Ical {
+                name: "VCALENDAR".into(),
+                properties: vec![],
+                children: vec![ical::Ical {
+                    name: "VEVENT".into(),
+                    properties: self.properties,
+                    children: vec![],
+                }],
+            },
+        }
+    }
+
+    pub fn etag(mut self, etag: Option<String>) -> Self {
+        self.etag = etag;
+        self
+    }
+
+    pub fn uid(mut self, value: String) -> Self {
+        self.properties.push(ical::Property {
+            name: "UID".to_string(),
+            value,
+            attributes: HashMap::new(),
+        });
+        self
+    }
+
+    pub fn timestamp(mut self, value: String) -> Self {
+        self.properties.push(ical::Property {
+            name: "DTSTAMP".to_string(),
+            value,
+            attributes: HashMap::new(),
+        });
+        self
+    }
+
+    pub fn summary(mut self, value: String) -> Self {
+        self.properties.push(ical::Property {
+            name: "SUMMARY".to_string(),
+            value,
+            attributes: HashMap::new(),
+        });
+        self
+    }
+
+    pub fn location(mut self, value: Option<String>) -> Self {
+        if let Some(value) = value {
+            self.properties.push(ical::Property {
+                name: "LOCATION".to_string(),
+                value,
+                attributes: HashMap::new(),
+            });
+        }
+        self
+    }
+
+    pub fn start(mut self, value: String, attributes: Vec<(&str, &str)>) -> Self {
+        let mut attribs = HashMap::new();
+        for (k, v) in attributes {
+            attribs.insert(k.into(), v.into());
+        }
+        self.properties.push(ical::Property {
+            name: "DTSTART".to_string(),
+            value,
+            attributes: attribs,
+        });
+        self
+    }
+
+    pub fn end(mut self, value: String, attributes: Vec<(&str, &str)>) -> Self {
+        let mut attribs = HashMap::new();
+        for (k, v) in attributes {
+            attribs.insert(k.into(), v.into());
+        }
+        self.properties.push(ical::Property {
+            name: "DTEND".to_string(),
+            value,
+            attributes: attribs,
+        });
+        self
+    }
+
+    pub fn description(mut self, value: Option<String>) -> Self {
+        if let Some(value) = value {
+            self.properties.push(ical::Property {
+                name: "DESCRIPTION".to_string(),
+                value,
+                attributes: HashMap::new(),
+            });
+        }
+        self
+    }
+
+    pub fn rrule(mut self, value: Option<String>) -> Self {
+        if let Some(value) = value {
+            self.properties.push(ical::Property {
+                name: "RRULE".to_string(),
+                value,
+                attributes: HashMap::new(),
+            });
+        }
+        self
     }
 }
