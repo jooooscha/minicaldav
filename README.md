@@ -1,15 +1,18 @@
 # minicaldav
 
+Small and easy CalDAV client.
+
 minicaldav is a caldav client and basic ical parser with as little dependencies as possible (but practical).
 
 ## Project scope:
 - Simple: Few dependencies, no async, the code is simple
 - Correct: CalDAV and ICAL are implemented correctly
-- Tested: CalDAV works with, and is tested with multiple common services.
+- Tested: CalDAV works with Events, and is tested with multiple common services
 - Easy to use: Good documentation and intuitive API
 
 # Project status
-- minicaldav is neither correct nor tested at this point.
+- minicaldav is neither correct nor sufficient tested at this point
+    - Tested only with one caldav server
 - minicaldav is in activley maintained
 - minicaldav is used in a public app: https://gitlab.com/loers/karlender
 

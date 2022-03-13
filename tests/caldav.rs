@@ -1,5 +1,5 @@
 use minicaldav::caldav::{
-    remove_event, get_calendars, get_events, get_home_set_url, get_principal_url, save_event,
+    get_calendars, get_events, get_home_set_url, get_principal_url, remove_event, save_event,
 };
 use ureq::Agent;
 use url::Url;
@@ -45,6 +45,7 @@ mod mock {
     }
 
     pub fn mock_caldav_server() -> MockServer {
+        std::thread::sleep(std::time::Duration::from_millis(1000));
         let lock = MUTEX.lock().unwrap();
         let (send, recv) = channel();
         let server = Server::http(CALDAV_BASE_URL).unwrap();

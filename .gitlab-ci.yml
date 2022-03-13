@@ -1,0 +1,95 @@
+.run_on_merge_request:
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
+    - if: '$CI_COMMIT_TITLE =~ /chore\(version\)\:.*/'
+      when: never
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: on_success
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: on_success
+
+.run_on_main:
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never
+    - if: '$CI_COMMIT_TITLE =~ /chore\(version\)\:.*/'
+      when: never
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: on_success
+
+.cache-x86-64:
+  cache:
+    key:
+      files:
+        - Cargo.lock
+      prefix: x86-64-
+    paths:
+      - target/
+
+stages:
+  - container-x86-64
+  - prechecks
+  - checks
+  - release
+  - post-release
+
+include:
+  - local: /ci/.gitlab-ci-containers.yml
+
+formatting & clippy:
+  image: $CI_REGISTRY_IMAGE/x86-64:main
+  stage: prechecks
+  extends: [.run_on_merge_request]
+  script:
+    - source $HOME/.cargo/env
+    - cargo fmt --all -- --color=always --check
+    - cargo clippy --no-deps
+
+outdated & audit:
+  image: $CI_REGISTRY_IMAGE/x86-64:main
+  allow_failure: true
+  stage: prechecks
+  extends: [.run_on_merge_request]
+  script:
+    - source $HOME/.cargo/env
+    - cargo outdated -R --exit-code 1
+    - cargo audit
+
+build and test x86-64:
+  image: $CI_REGISTRY_IMAGE/x86-64:main
+  stage: checks
+  extends: [.run_on_merge_request, .cache-x86-64]
+  script:
+    - source $HOME/.cargo/env
+    - cargo test --release --doc
+    - cargo test --release --lib
+    - cargo test --test caldav -- --test-threads 1
+release:
+  image: $CI_REGISTRY_IMAGE/x86-64:main
+  stage: release
+  extends: [.run_on_main, .cache-x86-64]
+  script:
+    - source $HOME/.cargo/env
+    - git remote set-url origin https://${GITLAB_USERNAME}:${GITLAB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git
+    - git config --global user.email "gitlab ci"
+    - git config --global user.name "gitlab ci"
+    - cog bump --auto || cog bump --patch
+    - TAG_VERSION=$(grep version Cargo.toml | head -1 | sed 's/version = "//g' | sed 's/"//g')
+    - git push --atomic origin v$TAG_VERSION HEAD:$CI_COMMIT_BRANCH
+    - cargo publish --token $CRATES_IO_TOKEN
+
+update dependency cache:
+  image: $CI_REGISTRY_IMAGE/x86-64:main
+  stage: post-release
+  extends: [.cache-x86-64]
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: on_success
+    - when: never
+  script:
+    - source $HOME/.cargo/env
+    - cargo clean
+    - cargo build --release

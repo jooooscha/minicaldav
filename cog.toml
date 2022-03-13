@@ -1,0 +1,14 @@
+pre_bump_hooks = [
+  "cargo bump {{version}}",
+  "cargo update",
+]
+post_bump_hooks = []
+tag_prefix = "v"
+
+[commit_types]
+
+[changelog]
+authors = []
+path = "CHANGELOG.md"
+
+[bump_profiles]

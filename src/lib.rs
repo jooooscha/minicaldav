@@ -28,8 +28,8 @@
 //! # Quick Start
 //!
 //! ```rust,no_run
-//! let agent = Agent::new();
-//! let url = Url::parse("http://mycaldav.com/").unwrap();
+//! let agent = ureq::Agent::new();
+//! let url = url::Url::parse("http://mycaldav.com/").unwrap();
 //! let username = "foo";
 //! let password = "s3cret!";
 //! let calendars = minicaldav::get_calendars(agent.clone(), username, password, &url).unwrap();
