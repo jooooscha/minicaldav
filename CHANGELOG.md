@@ -2,6 +2,11 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.1.1 - 2022-03-16
+#### Miscellaneous Chores
+- Adjust Event API - (9220fd4) - Florian Loers
+- - -
+
 ## v0.1.0 - 2022-03-13
 #### Features
 - Add property attribute parsing - (9ffd4d2) - Florian Loers
