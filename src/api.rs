@@ -134,37 +134,41 @@ impl Event {
         &self.url
     }
 
-    /// Get the value of the given property or `None`.
-    pub fn property(&self, name: &str) -> Option<&String> {
+    /// Get the property of the given name or `None`.
+    pub fn property(&self, name: &str) -> Option<Property> {
+        self.ical
+            .get("VEVENT")
+            .unwrap()
+            .properties
+            .iter()
+            .find_map(|p| {
+                if p.name == name {
+                    Some(Property::from(p.clone()))
+                } else {
+                    None
+                }
+            })
+    }
+
+    /// Get the value of the given property name or `None`.
+    pub fn get(&self, name: &str) -> Option<&String> {
         self.ical
             .properties
             .iter()
             .find_map(|p| if p.name == name { Some(&p.value) } else { None })
     }
 
-    /// Get the value of the given child ical container.
-    pub fn child_property(&self, name: &str, prop: &str) -> Option<&String> {
-        self.ical
-            .children
-            .iter()
-            .find(|c| c.name == name)
-            .and_then(|ical| {
-                ical.properties
-                    .iter()
-                    .find_map(|p| if p.name == prop { Some(&p.value) } else { None })
-            })
-    }
-
     /// Get all properties of this event.
-    pub fn properties(&self) -> Vec<(String, String)> {
+    pub fn properties(&self) -> Vec<(&String, &String)> {
         self.ical
             .get("VEVENT")
             .unwrap()
             .properties
             .iter()
-            .map(|p| (p.name.clone(), p.value.clone()))
+            .map(|p| (&p.name, &p.value))
             .collect()
     }
+
     pub fn etag(&self) -> Option<&String> {
         self.etag.as_ref()
     }
@@ -174,6 +178,37 @@ impl Event {
             url,
             etag: None,
             properties: vec![],
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Property {
+    name: String,
+    value: String,
+    attributes: HashMap<String, String>,
+}
+
+impl Property {
+    pub fn name(&self) -> &String {
+        &self.name
+    }
+
+    pub fn value(&self) -> &String {
+        &self.value
+    }
+
+    pub fn attribute(&self, name: &str) -> Option<&String> {
+        self.attributes.get(name)
+    }
+}
+
+impl From<ical::Property> for Property {
+    fn from(p: ical::Property) -> Self {
+        Self {
+            name: p.name,
+            value: p.value,
+            attributes: p.attributes,
         }
     }
 }
