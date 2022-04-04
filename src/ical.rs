@@ -181,7 +181,20 @@ impl Property {
 
     /// Serialized the property as ICAL formatted string.
     pub fn serialize(&self) -> String {
-        format!("{}:{}", self.name, self.value)
+        if self.attributes.len() > 0 {
+            format!(
+                "{};{}:{}",
+                self.name,
+                self.attributes
+                    .iter()
+                    .map(|(k, v)| format!("{}={}", k, v))
+                    .collect::<Vec<String>>()
+                    .join(";"),
+                self.value
+            )
+        } else {
+            format!("{}:{}", self.name, self.value)
+        }
     }
 }
 
