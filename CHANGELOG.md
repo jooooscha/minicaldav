@@ -2,6 +2,11 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.1.3 - 2022-05-10
+#### Documentation
+- Update - (4f3ff44) - Florian Loers
+- - -
+
 ## v0.1.2 - 2022-04-04
 #### Bug Fixes
 - Serialize property attributes - (b2cd677) - Florian Loers
