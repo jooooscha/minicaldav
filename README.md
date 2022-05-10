@@ -13,7 +13,7 @@ minicaldav is a caldav client and basic ical parser with as little dependencies 
 # Project status
 - minicaldav is neither correct nor sufficient tested at this point
     - Tested only with one caldav server
-- minicaldav is in activley maintained
+- minicaldav is kind of activley maintained as part of https://gitlab.com/loers/karlender
 - minicaldav is used in a public app: https://gitlab.com/loers/karlender
 
 # Quick Start
