@@ -50,7 +50,23 @@ impl Ical {
             if line.trim().is_empty() {
                 continue;
             }
-            let prop = Property::parse(line)?;
+            let prop = match Property::parse(line) {
+                Ok(prop) => prop,
+                Err(e) => {
+                    // workaround for when there are (wrong?) linebreaks in ical
+                    if line.starts_with(" ") && ical.is_some() {
+                        let ical: &mut Ical = ical.as_mut().unwrap();
+                        if let Some(last_prop) = ical.properties.last_mut() {
+                            let value = &last_prop.value;
+                            last_prop.value = format!("{}{}", value, line.trim());
+                            continue;
+                        } else {
+                            return Err(e);
+                        }
+                    }
+                    return Err(e);
+                }
+            };
             if ical.is_none() {
                 if let Some(name) = prop.is("BEGIN") {
                     ical = Some(Ical::new(name.clone()));
@@ -306,6 +322,73 @@ mod tests {
                             Property::new("LOCATION", "Hodgenville\\, Kentucky"),
                             Property::new("GEO", "37.5739497;-85.7399606"),
                             Property::new("DESCRIPTION", "Born February 12\\, 1809\\nSixteenth President (1861-1865)\\n\\n\\n\\nhttp://AmericanHistoryCalendar.com"),
+                            Property::new("URL", "http://americanhistorycalendar.com/peoplecalendar/1,328-abraham-lincoln"),
+                        ],
+                        children: vec![]
+                    }
+                ]
+            })
+        );
+    }
+
+    #[test]
+    fn test_ical_calendar_with_event_with_long_description_and_linebreak() {
+        let ical = r#"
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//ZContent.net//Zap Calendar 1.0//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+
+BEGIN:VEVENT
+SUMMARY:Abraham Lincoln
+UID:c7614cff-3549-4a00-9152-d25cc1fe077d
+SEQUENCE:0
+STATUS:CONFIRMED
+TRANSP:TRANSPARENT
+RRULE:FREQ=YEARLY;INTERVAL=1;BYMONTH=2;BYMONTHDAY=12
+DTSTART:20080212
+DTEND:20080213
+DTSTAMP:20150421T141403
+CATEGORIES:U.S. Presidents,Civil War People
+LOCATION:Hodgenville\, Kentucky
+GEO:37.5739497;-85.7399606
+DESCRIPTION:Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt 
+ ut labore et dolore magna aliqua
+URL:http://americanhistorycalendar.com/peoplecalendar/1,328-abraham-lincoln
+END:VEVENT
+
+END:VCALENDAR
+        "#;
+        let parsed = Ical::parse(&LineIterator::new(ical));
+        // println!("{:#?}", parsed);
+        assert_eq!(
+            parsed,
+            Ok(Ical {
+                name: "VCALENDAR".into(),
+                properties: vec![
+                    Property::new("VERSION", "2.0"),
+                    Property::new("PRODID", "-//ZContent.net//Zap Calendar 1.0//EN"),
+                    Property::new("CALSCALE", "GREGORIAN"),
+                    Property::new("METHOD", "PUBLISH"),
+                ],
+                children: vec![
+                    Ical {
+                        name: "VEVENT".into(),
+                        properties: vec![
+                            Property::new("SUMMARY", "Abraham Lincoln"),
+                            Property::new("UID", "c7614cff-3549-4a00-9152-d25cc1fe077d"),
+                            Property::new("SEQUENCE", "0"),
+                            Property::new("STATUS", "CONFIRMED"),
+                            Property::new("TRANSP", "TRANSPARENT"),
+                            Property::new("RRULE", "FREQ=YEARLY;INTERVAL=1;BYMONTH=2;BYMONTHDAY=12"),
+                            Property::new("DTSTART", "20080212"),
+                            Property::new("DTEND", "20080213"),
+                            Property::new("DTSTAMP", "20150421T141403"),
+                            Property::new("CATEGORIES", "U.S. Presidents,Civil War People"),
+                            Property::new("LOCATION", "Hodgenville\\, Kentucky"),
+                            Property::new("GEO", "37.5739497;-85.7399606"),
+                            Property::new("DESCRIPTION", "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua"),
                             Property::new("URL", "http://americanhistorycalendar.com/peoplecalendar/1,328-abraham-lincoln"),
                         ],
                         children: vec![]
