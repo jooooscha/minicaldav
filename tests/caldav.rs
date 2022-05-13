@@ -26,7 +26,7 @@ mod mock {
     };
     use tiny_http::{Header, Request, Response, Server};
 
-    static MUTEX: Lazy<Mutex<()>> = Lazy::new(|| Mutex::default());
+    static MUTEX: Lazy<Mutex<()>> = Lazy::new(Mutex::default);
 
     pub struct MockServer {
         stop: Sender<()>,
@@ -77,7 +77,7 @@ mod mock {
             }
         });
         let t2 = std::thread::spawn(move || {
-            if let Ok(_) = recv.recv() {
+            if recv.recv().is_ok() {
                 server.unblock();
             }
         });
@@ -293,8 +293,7 @@ pub fn test_save_events() {
     event0.data = event0
         .data
         .replace("SUMMARY:Event with timezone", "SUMMARY:Event 1234");
-    event0 =
-        save_event(client.clone(), USERNAME, PASSWORD, event0).expect("Failed to create event");
+    event0 = save_event(client, USERNAME, PASSWORD, event0).expect("Failed to create event");
 
     assert_eq!(event0.etag, Some("1234-1".into()));
 
@@ -322,7 +321,7 @@ pub fn test_delete_events() {
     event0.data = event0
         .data
         .replace("SUMMARY:Event with timezone", "SUMMARY:Event 1234");
-    remove_event(client.clone(), USERNAME, PASSWORD, event0).expect("Failed to create event");
+    remove_event(client, USERNAME, PASSWORD, event0).expect("Failed to create event");
 
     mockserver.end();
 }

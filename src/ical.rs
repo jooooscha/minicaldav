@@ -54,7 +54,7 @@ impl Ical {
                 Ok(prop) => prop,
                 Err(e) => {
                     // workaround for when there are (wrong?) linebreaks in ical
-                    if line.starts_with(" ") && ical.is_some() {
+                    if line.starts_with(' ') && ical.is_some() {
                         let ical: &mut Ical = ical.as_mut().unwrap();
                         if let Some(last_prop) = ical.properties.last_mut() {
                             let value = &last_prop.value;
@@ -197,7 +197,7 @@ impl Property {
 
     /// Serialized the property as ICAL formatted string.
     pub fn serialize(&self) -> String {
-        if self.attributes.len() > 0 {
+        if !self.attributes.is_empty() {
             format!(
                 "{};{}:{}",
                 self.name,
