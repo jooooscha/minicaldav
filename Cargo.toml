@@ -24,6 +24,7 @@ cli = ["rpassword"]
 ical = []
 
 [dependencies]
+log = "0.4"
 ureq = { version = "2", features = ["charset", "tls"], optional = true }
 xmltree = "0.10.3"
 url = "2"
@@ -33,5 +34,5 @@ rpassword = { version = "6", optional = true }
 [dev-dependencies]
 tiny_http = { version = "0.11", features = ["ssl"] }
 rustls = { version = "0.20" }
-rustls-pemfile = "0.3"
-once_cell = "1.9"
+rustls-pemfile = "1"
+once_cell = "1"

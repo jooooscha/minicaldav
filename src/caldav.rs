@@ -42,13 +42,21 @@ pub fn propfind_get(
         "Basic {}",
         base64::encode(format!("{}:{}", username, password))
     );
-    let reader = client
+    let content = client
         .request("PROPFIND", url.as_str())
         .set("Authorization", &auth)
         .set("CONTENT_TYPE", "application/xml")
         .set("Depth", depth)
         .send_bytes(body.as_bytes())?
-        .into_reader();
+        .into_string()
+        .map_err(|e| Error {
+            kind: ErrorKind::Parsing,
+            message: e.to_string(),
+        })?;
+
+    trace!("CalDAV propfind response: {:?}", content);
+    let reader = content.as_bytes();
+
     let root = xmltree::Element::parse(reader)?;
     let mut element = &root;
     let mut searched = 0;
@@ -145,13 +153,27 @@ pub fn get_home_set_url(
 }
 
 pub static CALENDARS_REQUEST: &str = r#"
-    <d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav" >
-       <d:prop>
-         <d:displayname />
-         <d:resourcetype />
-         <c:supported-calendar-component-set />
-       </d:prop>
-    </d:propfind>
+<d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav" >
+    <d:prop>
+        <d:displayname />
+        <d:resourcetype />
+        <c:supported-calendar-component-set />
+    </d:prop>
+</d:propfind>
+"#;
+
+pub static CALENDARS_QUERY: &str = r#"
+<c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+    <d:prop>
+        <d:getetag />
+        <d:displayname />
+        <d:resourcetype />
+        <c:supported-calendar-component-set />
+    </d:prop>
+    <c:filter>
+        <c:comp-filter name="VCALENDAR" />
+    </c:filter>
+</c:calendar-query>
 "#;
 
 /// Get calendars for the given credentials.
@@ -161,18 +183,43 @@ pub fn get_calendars(
     password: &str,
     base_url: &Url,
 ) -> Result<Vec<CalendarRef>, Error> {
-    let homeset_url = get_home_set_url(client.clone(), username, password, base_url)?;
     let mut calendars = Vec::new();
-    let root = propfind_get(
-        client,
-        username,
-        password,
-        &homeset_url,
-        CALENDARS_REQUEST,
-        &[],
-        "1",
-    )?
-    .1;
+    let result = match get_home_set_url(client.clone(), username, password, base_url) {
+        Ok(homeset_url) => propfind_get(
+            client.clone(),
+            username,
+            password,
+            &homeset_url,
+            CALENDARS_REQUEST,
+            &[],
+            "1",
+        ),
+        Err(_e) => propfind_get(
+            client.clone(),
+            username,
+            password,
+            base_url,
+            CALENDARS_REQUEST,
+            &[],
+            "1",
+        ),
+    };
+
+    let root = if result.is_err() {
+        propfind_get(
+            client,
+            username,
+            password,
+            base_url,
+            CALENDARS_QUERY,
+            &[],
+            "1",
+        )?
+        .1
+    } else {
+        result?.1
+    };
+
     for response in &root.children {
         if let Some(response) = response.as_element() {
             let name = response
@@ -277,12 +324,20 @@ pub fn get_events(
         base64::encode(format!("{}:{}", username, password))
     );
 
-    let reader = client
+    let content = client
         .request("REPORT", calendar_ref.url.as_str())
         .set("Authorization", &auth)
+        .set("Depth", "1")
         .set("CONTENT_TYPE", "application/xml")
         .send_bytes(CALENDAR_EVENTS_REQUEST.as_bytes())?
-        .into_reader();
+        .into_string()
+        .map_err(|e| Error {
+            kind: ErrorKind::Parsing,
+            message: e.to_string(),
+        })?;
+
+    trace!("Read CalDAV events: {:?}", content);
+    let reader = content.as_bytes();
 
     let root = xmltree::Element::parse(reader)?;
     let mut events = Vec::new();

@@ -6,6 +6,8 @@ use url::Url;
 
 const CALDAV_BASE_URL: &str = "localhost:8000";
 
+const PROPFIND_RESPONSE_WITHOUT_PRINCIPAL: &str =
+    include_str!("responses/propfind_response_without_principal.xml");
 const USER_PRINCIPAL_RESPONSE: &str = include_str!("responses/principal_response.xml");
 const HOME_SET_RESPONSE: &str = include_str!("responses/home_set_response.xml");
 const CALENDARS_RESPONSE: &str = include_str!("responses/calendars_response.xml");
@@ -44,7 +46,11 @@ mod mock {
         }
     }
 
-    pub fn mock_caldav_server() -> MockServer {
+    pub struct Options {
+        pub propfind_without_principal: bool,
+    }
+
+    pub fn mock_caldav_server(options: Options) -> MockServer {
         std::thread::sleep(std::time::Duration::from_millis(1000));
         let lock = MUTEX.lock().unwrap();
         let (send, recv) = channel();
@@ -55,7 +61,7 @@ mod mock {
         let t1 = std::thread::spawn(move || {
             for mut request in s.incoming_requests() {
                 println!("Got request {:?} {:?}", request.method(), request.url());
-                if let Some(response) = mock_caldav_server_behaviour(&mut request) {
+                if let Some(response) = mock_caldav_server_behaviour(&mut request, &options) {
                     println!(
                         "Send response {:?} {:?}",
                         response.status_code(),
@@ -91,6 +97,7 @@ mod mock {
 
     fn mock_caldav_server_behaviour(
         request: &mut Request,
+        options: &Options,
     ) -> Option<Response<std::io::Cursor<Vec<u8>>>> {
         let mut body = String::new();
         request.as_reader().read_to_string(&mut body).unwrap();
@@ -102,7 +109,13 @@ mod mock {
             "/",
             Some(USER_PRINCIPAL_REQUEST),
         ) {
+            if options.propfind_without_principal {
+                return Some(Response::from_string(PROPFIND_RESPONSE_WITHOUT_PRINCIPAL));
+            }
             return Some(Response::from_string(USER_PRINCIPAL_RESPONSE));
+        }
+        if match_request(request, &body, "PROPFIND", "/", Some(CALENDARS_QUERY)) {
+            return Some(Response::from_string(CALENDARS_RESPONSE));
         }
         if match_request(
             request,
@@ -120,6 +133,9 @@ mod mock {
             "/caldav/",
             Some(CALENDARS_REQUEST),
         ) {
+            return Some(Response::from_string(CALENDARS_RESPONSE));
+        }
+        if match_request(request, &body, "PROPFIND", "/", Some(CALENDARS_REQUEST)) {
             return Some(Response::from_string(CALENDARS_RESPONSE));
         }
         if match_request(
@@ -175,7 +191,9 @@ fn get_client() -> Agent {
 
 #[test]
 pub fn test_get_user_principal() {
-    let mockserver = mock::mock_caldav_server();
+    let mockserver = mock::mock_caldav_server(mock::Options {
+        propfind_without_principal: false,
+    });
     let client = get_client();
     let base_url = Url::parse(&format!("http://{}", CALDAV_BASE_URL)).unwrap();
     let principal_url = get_principal_url(client, USERNAME, PASSWORD, &base_url)
@@ -188,8 +206,10 @@ pub fn test_get_user_principal() {
 }
 
 #[test]
-pub fn test_get_home_set() {
-    let mockserver = mock::mock_caldav_server();
+pub fn test_get_calendar_home_set() {
+    let mockserver = mock::mock_caldav_server(mock::Options {
+        propfind_without_principal: false,
+    });
     let client = get_client();
     let base_url = Url::parse(&format!("http://{}", CALDAV_BASE_URL)).unwrap();
     let home_set_url = get_home_set_url(client, USERNAME, PASSWORD, &base_url)
@@ -202,8 +222,25 @@ pub fn test_get_home_set() {
 }
 
 #[test]
+pub fn test_get_calendars_without_homeset() {
+    let mockserver = mock::mock_caldav_server(mock::Options {
+        propfind_without_principal: true,
+    });
+    let client = get_client();
+    let base_url = Url::parse(&format!("http://{}", CALDAV_BASE_URL)).unwrap();
+    let calendars =
+        get_calendars(client, USERNAME, PASSWORD, &base_url).expect("Failed to get calendars");
+    assert_eq!(calendars.len(), 2);
+    assert_eq!(calendars.get(0).unwrap().name, "Calendar");
+    assert_eq!(calendars.get(1).unwrap().name, "Birthdays");
+    mockserver.end();
+}
+
+#[test]
 pub fn test_get_calendars() {
-    let mockserver = mock::mock_caldav_server();
+    let mockserver = mock::mock_caldav_server(mock::Options {
+        propfind_without_principal: false,
+    });
     let client = get_client();
     let base_url = Url::parse(&format!("http://{}", CALDAV_BASE_URL)).unwrap();
     let calendars =
@@ -216,7 +253,9 @@ pub fn test_get_calendars() {
 
 #[test]
 pub fn test_get_events() {
-    let mockserver = mock::mock_caldav_server();
+    let mockserver = mock::mock_caldav_server(mock::Options {
+        propfind_without_principal: false,
+    });
     let client = get_client();
     let base_url = Url::parse(&format!("http://{}", CALDAV_BASE_URL)).unwrap();
     let calendars = get_calendars(client.clone(), USERNAME, PASSWORD, &base_url)
@@ -274,7 +313,9 @@ pub fn test_get_events() {
 
 #[test]
 pub fn test_save_events() {
-    let mockserver = mock::mock_caldav_server();
+    let mockserver = mock::mock_caldav_server(mock::Options {
+        propfind_without_principal: false,
+    });
     let client = get_client();
     let base_url = Url::parse(&format!("http://{}", CALDAV_BASE_URL)).unwrap();
     let calendars = get_calendars(client.clone(), USERNAME, PASSWORD, &base_url)
@@ -302,7 +343,9 @@ pub fn test_save_events() {
 
 #[test]
 pub fn test_delete_events() {
-    let mockserver = mock::mock_caldav_server();
+    let mockserver = mock::mock_caldav_server(mock::Options {
+        propfind_without_principal: false,
+    });
     let client = get_client();
     let base_url = Url::parse(&format!("http://{}", CALDAV_BASE_URL)).unwrap();
     let calendars = get_calendars(client.clone(), USERNAME, PASSWORD, &base_url)

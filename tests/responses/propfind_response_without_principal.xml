@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='utf-8'?>
+<multistatus xmlns="DAV:">
+    <response>
+        <href>/radicale/clayton/</href>
+        <propstat>
+            <prop>
+                <getetag />
+            </prop>
+            <status>HTTP/1.1 404 Not Found</status>
+        </propstat>
+    </response>
+    <response>
+        <href>/radicale/clayton/calendar/</href>
+        <propstat>
+            <prop>
+                <getetag>"aaaaaaaaaa"</getetag>
+            </prop>
+            <status>HTTP/1.1 200 OK</status>
+        </propstat>
+    </response>
+    <response>
+        <href>/radicale/clayton/contacts/</href>
+        <propstat>
+            <prop>
+                <getetag>"bbbbbbbbbbbbb"</getetag>
+            </prop>
+            <status>HTTP/1.1 200 OK</status>
+        </propstat>
+    </response>
+    <response>
+        <href>/radicale/clayton/contact_birthdays/</href>
+        <propstat>
+            <prop>
+                <getetag>"ccccccccccccc"</getetag>
+            </prop>
+            <status>HTTP/1.1 200 OK</status>
+        </propstat>
+    </response>
+</multistatus>
