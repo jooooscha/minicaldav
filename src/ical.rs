@@ -45,28 +45,37 @@ impl Ical {
     }
     /// Parse the given lines to an ICAL container.
     pub fn parse(lines: &LineIterator) -> Result<Self, Error> {
-        let mut ical = None;
+        let mut ical: Option<Ical> = None;
+        let mut line_buffer = String::new();
         while let Some(line) = lines.next() {
             if line.trim().is_empty() {
                 continue;
             }
-            let prop = match Property::parse(line) {
-                Ok(prop) => prop,
-                Err(e) => {
-                    // workaround for when there are (wrong?) linebreaks in ical
-                    if line.starts_with(' ') && ical.is_some() {
-                        let ical: &mut Ical = ical.as_mut().unwrap();
-                        if let Some(last_prop) = ical.properties.last_mut() {
-                            let value = &last_prop.value;
-                            last_prop.value = format!("{}{}", value, line.trim());
-                            continue;
-                        } else {
-                            return Err(e);
-                        }
+
+            if let Some(line) = line.strip_prefix(' ') {
+                if line_buffer.is_empty() {
+                    if let Some(last_prop) = ical.as_mut().unwrap().properties.pop() {
+                        line_buffer.push_str(&last_prop.serialize());
                     }
-                    return Err(e);
                 }
-            };
+                line_buffer.push_str(line);
+                continue;
+            } else if !line.contains(':') && line_buffer.is_empty() {
+                line_buffer.push_str(line);
+                continue;
+            } else if !line_buffer.is_empty() {
+                let prop = Property::parse(&line_buffer)?;
+                ical.as_mut().unwrap().properties.push(prop);
+                line_buffer = String::new();
+            }
+
+            if !line.contains(':') {
+                line_buffer.push_str(line);
+                continue;
+            }
+
+            let prop = Property::parse(line)?;
+
             if ical.is_none() {
                 if let Some(name) = prop.is("BEGIN") {
                     ical = Some(Ical::new(name.clone()));
@@ -242,14 +251,12 @@ mod tests {
 
     #[test]
     fn test_ical_calendar_with_properties() {
-        let ical = r#"
-        BEGIN:VCALENDAR
-        VERSION:2.0
-        PRODID:-//ZContent.net//Zap Calendar 1.0//EN
-        CALSCALE:GREGORIAN
-        METHOD:PUBLISH
-        END:VCALENDAR
-        "#;
+        let ical = r#"BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//ZContent.net//Zap Calendar 1.0//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+END:VCALENDAR"#;
         assert_eq!(
             Ical::parse(&LineIterator::new(ical)),
             Ok(Ical {
@@ -267,32 +274,28 @@ mod tests {
 
     #[test]
     fn test_ical_calendar_with_events() {
-        let ical = r#"
-        BEGIN:VCALENDAR
-        VERSION:2.0
-        PRODID:-//ZContent.net//Zap Calendar 1.0//EN
-        CALSCALE:GREGORIAN
-        METHOD:PUBLISH
-
-            BEGIN:VEVENT
-                SUMMARY:Abraham Lincoln
-                UID:c7614cff-3549-4a00-9152-d25cc1fe077d
-                SEQUENCE:0
-                STATUS:CONFIRMED
-                TRANSP:TRANSPARENT
-                RRULE:FREQ=YEARLY;INTERVAL=1;BYMONTH=2;BYMONTHDAY=12
-                DTSTART:20080212
-                DTEND:20080213
-                DTSTAMP:20150421T141403
-                CATEGORIES:U.S. Presidents,Civil War People
-                LOCATION:Hodgenville\, Kentucky
-                GEO:37.5739497;-85.7399606
-                DESCRIPTION:Born February 12\, 1809\nSixteenth President (1861-1865)\n\n\n\nhttp://AmericanHistoryCalendar.com
-                URL:http://americanhistorycalendar.com/peoplecalendar/1,328-abraham-lincoln
-            END:VEVENT
-
-        END:VCALENDAR
-        "#;
+        let ical = r#"BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//ZContent.net//Zap Calendar 1.0//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+SUMMARY:Abraham Lincoln
+UID:c7614cff-3549-4a00-9152-d25cc1fe077d
+SEQUENCE:0
+STATUS:CONFIRMED
+TRANSP:TRANSPARENT
+RRULE:FREQ=YEARLY;INTERVAL=1;BYMONTH=2;BYMONTHDAY=12
+DTSTART:20080212
+DTEND:20080213
+DTSTAMP:20150421T141403
+CATEGORIES:U.S. Presidents,Civil War People
+LOCATION:Hodgenville\, Kentucky
+GEO:37.5739497;-85.7399606
+DESCRIPTION:Born February 12\, 1809\nSixteenth President (1861-1865)\n\n\n\nhttp://AmericanHistoryCalendar.com
+URL:http://americanhistorycalendar.com/peoplecalendar/1,328-abraham-lincoln
+END:VEVENT
+END:VCALENDAR"#;
         let parsed = Ical::parse(&LineIterator::new(ical));
         // println!("{:#?}", parsed);
         assert_eq!(
@@ -333,13 +336,11 @@ mod tests {
 
     #[test]
     fn test_ical_calendar_with_event_with_long_description_and_linebreak() {
-        let ical = r#"
-BEGIN:VCALENDAR
+        let ical = r#"BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//ZContent.net//Zap Calendar 1.0//EN
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
-
 BEGIN:VEVENT
 SUMMARY:Abraham Lincoln
 UID:c7614cff-3549-4a00-9152-d25cc1fe077d
@@ -353,11 +354,10 @@ DTSTAMP:20150421T141403
 CATEGORIES:U.S. Presidents,Civil War People
 LOCATION:Hodgenville\, Kentucky
 GEO:37.5739497;-85.7399606
-DESCRIPTION:Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt 
- ut labore et dolore magna aliqua
+DESCRIPTION:Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+  eiusmod tempor incididunt ut labore et dolore magna aliqua
 URL:http://americanhistorycalendar.com/peoplecalendar/1,328-abraham-lincoln
 END:VEVENT
-
 END:VCALENDAR
         "#;
         let parsed = Ical::parse(&LineIterator::new(ical));
@@ -395,6 +395,90 @@ END:VCALENDAR
                     }
                 ]
             })
+        );
+    }
+
+    #[test]
+    fn test_ical_with_max_line_linebreaks() {
+        let ical = r#"BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:asdf
+BEGIN:VTIMEZONE
+TZID:Europe/Berlin
+LAST-MODIFIED:20220317T223602Z
+TZURL:http://tzurl.org/zoneinfo-outlook/Europe/Berlin
+X-LIC-LOCATION:Europe/Berlin
+BEGIN:DAYLIGHT
+TZNAME:CEST
+TZOFFSETFROM:+0100
+TZOFFSETTO:+0200
+DTSTART:19700329T020000
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU
+END:DAYLIGHT
+BEGIN:STANDARD
+TZNAME:CET
+TZOFFSETFROM:+0200
+TZOFFSETTO:+0100
+DTSTART:19701025T030000
+RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+DTSTAMP:20220611T081002Z
+ATTACH;FILENAME=arrow_up.svg;FMTTYPE=image/svg+xml;SIZE=2516;MANAGED-ID=1:h
+ ttps://caldab.caldav.org/attachments/123456789012345/test.svg
+ATTENDEE;CN=Fooo;PARTSTAT=NEEDS-ACTION;CUTYPE=INDIVIDUAL;EMAIL=foooooo.baaa
+ aaar@fobar.com;X-CALENDARSERVER-DTSTAMP=20220611T081002Z:mailto:foooooo.ba
+ aaaaar@fobar.com
+ATTENDEE;CN=Foooooo Baaar;PARTSTAT=ACCEPTED;CUTYPE=INDIVIDUAL;EMAIL=foooo@b
+ aaaaar.org;X-CALENDARSERVER-DTSTAMP=20220611T080833Z:mailto:foooo@baaaaar.
+ org
+CLASS:CONFIDENTIAL
+CREATED:20220611T080833Z
+DESCRIPTION:Lorem ipsum dolor sit amet\\, consectetur adipiscing elit\\, sed 
+ do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad 
+ minim veniam\\, quis nostrud exercitation ullamco laboris nisi ut aliquip e
+ x ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptat
+ e velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaec
+ at cupidatat non proident\\, sunt in culpa qui officia deserunt mollit anim
+ id est laborum.
+DTEND;TZID=Europe/Berlin:20220611T113000
+DTSTART;TZID=Europe/Berlin:20220611T103000
+LAST-MODIFIED:20220611T081002Z
+ORGANIZER;CN=Foooooo Baaar;EMAIL=foooo@baaaaar.org:mailto:foooo@baaaaar.org
+    
+RRULE:FREQ=DAILY;COUNT=1
+SEQUENCE:1
+SUMMARY:Kaputtest
+TRANSP:TRANSPARENT
+UID:11111111-1111-1111-1111-111111111111
+BEGIN:VALARM
+TRIGGER;RELATED=START:-PT15M
+UID:11111111-1111-1111-1111-111111111112
+ACTION:DISPLAY
+DESCRIPTION:reminder
+END:VALARM
+END:VEVENT
+END:VCALENDAR"#;
+
+        let parsed = Ical::parse(&LineIterator::new(ical));
+        println!("{:?}", parsed);
+        assert!(parsed.is_ok());
+        let cal = parsed.unwrap();
+        assert_eq!(
+            cal.children[1].properties[0].serialize(),
+            "DTSTAMP:20220611T081002Z"
+        );
+        let p1 = cal.children[1].properties[1].serialize();
+        assert!(
+            p1.starts_with("ATTACH")
+                && p1.ends_with("https://caldab.caldav.org/attachments/123456789012345/test.svg")
+        );
+        let p2 = cal.children[1].properties[2].serialize();
+        assert!(p2.starts_with("ATTENDEE") && p2.ends_with(":mailto:foooooo.baaaaaar@fobar.com"));
+        let p6 = cal.children[1].properties[6].serialize();
+        assert_eq!(
+            p6, ("DESCRIPTION:Lorem ipsum dolor sit amet\\\\, consectetur adipiscing elit\\\\, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam\\\\, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident\\\\, sunt in culpa qui officia deserunt mollit animid est laborum.")
         );
     }
 
