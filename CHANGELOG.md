@@ -2,6 +2,11 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.1.6 - 2022-06-11
+#### Bug Fixes
+- Handle single event errors - (533ada7) - Florian Loers
+- - -
+
 ## v0.1.5 - 2022-06-09
 #### Bug Fixes
 - Handle propfind responses without user-principal - (b1b3d76) - Florian Loers
