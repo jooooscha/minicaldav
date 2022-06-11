@@ -2,6 +2,11 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.1.7 - 2022-06-11
+#### Bug Fixes
+- Support linebreaks in ical - (4332203) - Florian Loers
+- - -
+
 ## v0.1.6 - 2022-06-11
 #### Bug Fixes
 - Handle single event errors - (533ada7) - Florian Loers
