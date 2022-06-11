@@ -35,9 +35,12 @@
 //! let calendars = minicaldav::get_calendars(agent.clone(), username, password, &url).unwrap();
 //! for calendar in calendars {
 //!     println!("{:?}", calendar);
-//!     let events = minicaldav::get_events(agent.clone(), username, password, &calendar).unwrap();
+//!     let (events, errors) = minicaldav::get_events(agent.clone(), username, password, &calendar).unwrap();
 //!     for event in events {
 //!         println!("{:?}", event);
+//!     }
+//!     for error in errors {
+//!         println!("Error: {:?}", error);
 //!     }
 //! }
 //! ```

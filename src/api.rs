@@ -42,12 +42,14 @@ pub fn get_calendars(
 }
 
 /// Get all events in the given `Calendar`.
+/// This function returns a tuple of all events that could be parsed and all events that couldn't.
+/// If anything besides parsing the event data fails, an Err will be returned.
 pub fn get_events(
     agent: Agent,
     username: &str,
     password: &str,
     calendar: &Calendar,
-) -> Result<Vec<Event>, Error> {
+) -> Result<(Vec<Event>, Vec<Error>), Error> {
     let event_refs = caldav::get_events(
         agent,
         username,
@@ -56,16 +58,22 @@ pub fn get_events(
         &calendar.inner,
     )?;
     let mut events = Vec::new();
+    let mut errors = Vec::new();
     for event_ref in event_refs {
         let lines = ical::LineIterator::new(&event_ref.data);
-        let ical = ical::Ical::parse(&lines)?;
-        events.push(Event {
-            url: event_ref.url.clone(),
-            etag: event_ref.etag.clone(),
-            ical,
-        })
+        match ical::Ical::parse(&lines) {
+            Ok(ical) => events.push(Event {
+                url: event_ref.url.clone(),
+                etag: event_ref.etag.clone(),
+                ical,
+            }),
+            Err(e) => errors.push(Error::Ical(format!(
+                "Could not parse event {}: {:?}",
+                event_ref.data, e
+            ))),
+        }
     }
-    Ok(events)
+    Ok((events, errors))
 }
 
 /// Save the given event on the CalDAV server.
