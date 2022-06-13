@@ -178,7 +178,21 @@ impl Property {
 
     /// Parses the given input to a Property instance.
     pub fn parse(input: &str) -> Result<Self, Error> {
-        if let Some((name, value)) = input.split_once(':') {
+        let mut colon_index = None;
+        let mut ignore_colon = false;
+        for (i, c) in input.chars().enumerate() {
+            if c == '"' {
+                ignore_colon = !ignore_colon;
+            } else if c == ':' && !ignore_colon {
+                colon_index = Some(i);
+                break;
+            }
+        }
+
+        if let Some((name, value)) = colon_index.map(|i| input.split_at(i)) {
+            // since we just splitted on ":" it must be the prefix of value
+            let value = value.strip_prefix(':').unwrap();
+
             let mut parts = name.split(';');
             let mut property = Property::new(parts.next().unwrap().trim(), value);
             for part in parts {
@@ -442,11 +456,12 @@ DESCRIPTION:Lorem ipsum dolor sit amet\\, consectetur adipiscing elit\\, sed
  e velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaec
  at cupidatat non proident\\, sunt in culpa qui officia deserunt mollit anim
  id est laborum.
-DTEND;TZID=Europe/Berlin:20220611T113000
-DTSTART;TZID=Europe/Berlin:20220611T103000
+DTSTART;TZID="(UTC-08:00) Pacific Time (US & Canada)";VALUE=DATE-TIME:2019
+ 1209T140000
+DTEND;TZID="(UTC-08:00) Pacific Time (US & Canada)";VALUE=DATE-TIME:201912
+ 09T150000
 LAST-MODIFIED:20220611T081002Z
 ORGANIZER;CN=Foooooo Baaar;EMAIL=foooo@baaaaar.org:mailto:foooo@baaaaar.org
-    
 RRULE:FREQ=DAILY;COUNT=1
 SEQUENCE:1
 SUMMARY:Kaputtest
@@ -462,7 +477,6 @@ END:VEVENT
 END:VCALENDAR"#;
 
         let parsed = Ical::parse(&LineIterator::new(ical));
-        println!("{:?}", parsed);
         assert!(parsed.is_ok());
         let cal = parsed.unwrap();
         assert_eq!(
@@ -480,6 +494,8 @@ END:VCALENDAR"#;
         assert_eq!(
             p6, ("DESCRIPTION:Lorem ipsum dolor sit amet\\\\, consectetur adipiscing elit\\\\, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam\\\\, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident\\\\, sunt in culpa qui officia deserunt mollit animid est laborum.")
         );
+        assert_eq!(cal.children[1].properties[7].value, "20191209T140000");
+        assert_eq!(cal.children[1].properties[8].value, "20191209T150000");
     }
 
     #[test]
