@@ -2,6 +2,11 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.1.8 - 2022-06-13
+#### Bug Fixes
+- Determine correct property-value separator position - (39df6ee) - Florian Loers
+- - -
+
 ## v0.1.7 - 2022-06-11
 #### Bug Fixes
 - Support linebreaks in ical - (4332203) - Florian Loers
