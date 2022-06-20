@@ -144,18 +144,15 @@ impl Event {
 
     /// Get the property of the given name or `None`.
     pub fn property(&self, name: &str) -> Option<Property> {
-        self.ical
-            .get("VEVENT")
-            .unwrap()
-            .properties
-            .iter()
-            .find_map(|p| {
+        self.ical.get("VEVENT").and_then(|ical| {
+            ical.properties.iter().find_map(|p| {
                 if p.name == name {
                     Some(Property::from(p.clone()))
                 } else {
                     None
                 }
             })
+        })
     }
 
     /// Get the value of the given property name or `None`.
@@ -170,11 +167,16 @@ impl Event {
     pub fn properties(&self) -> Vec<(&String, &String)> {
         self.ical
             .get("VEVENT")
-            .unwrap()
-            .properties
-            .iter()
-            .map(|p| (&p.name, &p.value))
-            .collect()
+            .map(|ical| {
+                ical.properties
+                    .iter()
+                    .map(|p| (&p.name, &p.value))
+                    .collect::<Vec<(&String, &String)>>()
+            })
+            .unwrap_or_else(|| {
+                error!("Could not get properties: No VEVENT section.");
+                Vec::new()
+            })
     }
 
     pub fn etag(&self) -> Option<&String> {

@@ -54,7 +54,7 @@ impl Ical {
 
             if let Some(line) = line.strip_prefix(' ') {
                 if line_buffer.is_empty() {
-                    if let Some(last_prop) = ical.as_mut().unwrap().properties.pop() {
+                    if let Some(last_prop) = ical.as_mut().and_then(|ical| ical.properties.pop()) {
                         line_buffer.push_str(&last_prop.serialize());
                     }
                 }
@@ -65,7 +65,9 @@ impl Ical {
                 continue;
             } else if !line_buffer.is_empty() {
                 let prop = Property::parse(&line_buffer)?;
-                ical.as_mut().unwrap().properties.push(prop);
+                if let Some(ical) = ical.as_mut() {
+                    ical.properties.push(prop);
+                }
                 line_buffer = String::new();
             }
 
@@ -84,18 +86,29 @@ impl Ical {
             }
             if prop.is("BEGIN").is_some() {
                 let child = Ical::parse(lines.decrement())?;
-                ical.as_mut().unwrap().children.push(child);
+                if let Some(ical) = ical.as_mut() {
+                    ical.children.push(child);
+                }
                 continue;
             }
             if let Some(name) = prop.is("END") {
-                if name == &ical.as_ref().unwrap().name {
-                    return Ok(ical.unwrap());
+                if ical.is_some() && Some(name) == ical.as_ref().map(|ical| &ical.name) {
+                    if let Some(ical) = ical {
+                        return Ok(ical);
+                    }
                 }
             }
-            ical.as_mut().unwrap().properties.push(prop);
+            if let Some(ical) = ical.as_mut() {
+                ical.properties.push(prop);
+            } else {
+                warn!("minicaldav wants to add a property but it does not seem to collect properties right now.")
+            }
         }
         if ical.is_some() {
-            Err(Error::new(format!("Missing END:{}", ical.unwrap().name)))
+            Err(Error::new(format!(
+                "Missing END:{:?}",
+                ical.map(|i| i.name)
+            )))
         } else {
             Err(Error::new("Invalid input".into()))
         }
@@ -191,16 +204,28 @@ impl Property {
 
         if let Some((name, value)) = colon_index.map(|i| input.split_at(i)) {
             // since we just splitted on ":" it must be the prefix of value
-            let value = value.strip_prefix(':').unwrap();
+            if let Some(value) = value.strip_prefix(':') {
+                let mut parts = name.split(';');
 
-            let mut parts = name.split(';');
-            let mut property = Property::new(parts.next().unwrap().trim(), value);
-            for part in parts {
-                if let Some((k, v)) = part.split_once('=') {
-                    property.attributes.insert(k.into(), v.into());
+                if let Some(next) = parts.next() {
+                    let mut property = Property::new(next.trim(), value);
+                    for part in parts {
+                        if let Some((k, v)) = part.split_once('=') {
+                            property.attributes.insert(k.into(), v.into());
+                        }
+                    }
+                    Ok(property)
+                } else {
+                    Err(Error::new(format!(
+                        "The property [{:?}, {:?}] did not contain any text after split(';')",
+                        name, value
+                    )))
                 }
+            } else {
+                Err(Error::new(format!(
+                    "The property [{:?}, {:?}] was split on ':' but then ':' could not be stripped.", name, value
+                )))
             }
-            Ok(property)
         } else {
             Err(Error::new(format!(
                 "Property '{}' does not match proper pattern",

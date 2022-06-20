@@ -254,13 +254,21 @@ pub fn get_calendars(
                 .unwrap_or(false);
             let href = response.get_child("href").and_then(|e| e.get_text());
 
-            if href.is_none() || name.is_none() || !is_calendar || !supports_vevents {
+            if !is_calendar || !supports_vevents {
                 continue;
             }
-            calendars.push(CalendarRef {
-                url: base_url.join(&href.unwrap()).unwrap(),
-                name: name.unwrap().to_string(),
-            })
+            if let Some((href, name)) = href.and_then(|href| name.map(|name| (href, name))) {
+                if let Ok(url) = base_url.join(&href) {
+                    calendars.push(CalendarRef {
+                        url,
+                        name: name.to_string(),
+                    })
+                } else {
+                    error!("Could not parse url: {}/{}", base_url, href);
+                }
+            } else {
+                continue;
+            }
         }
     }
     Ok(calendars)
@@ -358,12 +366,17 @@ pub fn get_events(
             if href.is_none() || etag.is_none() || data.is_none() {
                 continue;
             }
-            if let Ok(url) = base_url.join(&href.unwrap()) {
-                events.push(EventRef {
-                    url,
-                    data: data.unwrap().to_string(),
-                    etag,
-                })
+
+            if let Some((href, data)) = href.and_then(|href| data.map(|data| (href, data))) {
+                if let Ok(url) = base_url.join(&href) {
+                    events.push(EventRef {
+                        url,
+                        data: data.to_string(),
+                        etag,
+                    })
+                } else {
+                    error!("Could not parse url {}/{}", base_url, href)
+                }
             }
         }
     }
