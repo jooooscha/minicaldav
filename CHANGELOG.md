@@ -2,6 +2,11 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.1.9 - 2022-06-20
+#### Bug Fixes
+- Remove unwraps from production code - (e78f6e5) - Florian Loers
+- - -
+
 ## v0.1.8 - 2022-06-13
 #### Bug Fixes
 - Determine correct property-value separator position - (39df6ee) - Florian Loers
