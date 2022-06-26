@@ -2,6 +2,11 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.1.10 - 2022-06-26
+#### Bug Fixes
+- Support parsing apple location properties - (73a7994) - Florian Loers
+- - -
+
 ## v0.1.9 - 2022-06-20
 #### Bug Fixes
 - Remove unwraps from production code - (e78f6e5) - Florian Loers
