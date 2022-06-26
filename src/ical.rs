@@ -191,45 +191,36 @@ impl Property {
 
     /// Parses the given input to a Property instance.
     pub fn parse(input: &str) -> Result<Self, Error> {
-        let mut colon_index = None;
+        let mut name = String::new();
+        let mut value = String::new();
+        let mut read_value = false;
         let mut ignore_colon = false;
-        for (i, c) in input.chars().enumerate() {
+        for c in input.chars() {
             if c == '"' {
                 ignore_colon = !ignore_colon;
-            } else if c == ':' && !ignore_colon {
-                colon_index = Some(i);
-                break;
+            } else if c == ':' && !ignore_colon && !read_value {
+                read_value = true;
+                continue;
+            }
+            if read_value {
+                value.push(c);
+            } else {
+                name.push(c);
             }
         }
-
-        if let Some((name, value)) = colon_index.map(|i| input.split_at(i)) {
-            // since we just splitted on ":" it must be the prefix of value
-            if let Some(value) = value.strip_prefix(':') {
-                let mut parts = name.split(';');
-
-                if let Some(next) = parts.next() {
-                    let mut property = Property::new(next.trim(), value);
-                    for part in parts {
-                        if let Some((k, v)) = part.split_once('=') {
-                            property.attributes.insert(k.into(), v.into());
-                        }
-                    }
-                    Ok(property)
-                } else {
-                    Err(Error::new(format!(
-                        "The property [{:?}, {:?}] did not contain any text after split(';')",
-                        name, value
-                    )))
+        let mut parts = name.split(';');
+        if let Some(next) = parts.next() {
+            let mut property = Property::new(next.trim(), &value);
+            for part in parts {
+                if let Some((k, v)) = part.split_once('=') {
+                    property.attributes.insert(k.into(), v.into());
                 }
-            } else {
-                Err(Error::new(format!(
-                    "The property [{:?}, {:?}] was split on ':' but then ':' could not be stripped.", name, value
-                )))
             }
+            Ok(property)
         } else {
             Err(Error::new(format!(
-                "Property '{}' does not match proper pattern",
-                input
+                "The property [{:?}, {:?}] did not contain any text after split(';')",
+                name, value
             )))
         }
     }
@@ -582,5 +573,79 @@ END:VCALENDAR
         };
 
         assert_eq!(ical.serialize(), expectation);
+    }
+
+    #[test]
+    fn test_event_with_long_location() {
+        // let ical = "BEGIN:VCALENDAR\nCALSCALE:GREGORIAN\nPRODID:-//Apple Inc.//iOS 13.2//EN\nVERSION:2.0\nBEGIN:VTIMEZONE\nTZID:America/Vancouver\nBEGIN:DAYLIGHT\nDTSTART:20070311T020000\nRRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU\nTZNAME:GMT-7\nTZOFFSETFROM:-0800\nTZOFFSETTO:-0700\nEND:DAYLIGHT\nBEGIN:STANDARD\nDTSTART:20071104T020000\nRRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU\nTZNAME:GMT-8\nTZOFFSETFROM:-0700\nTZOFFSETTO:-0800\nEND:STANDARD\nEND:VTIMEZONE\nBEGIN:VEVENT\nCREATED:20191002T181641Z\nDTEND;TZID=America/Vancouver:20191014T090000\nDTSTAMP:20191014T050818Z\nDTSTART;TZID=America/Vancouver:20191014T070000\nLAST-MODIFIED:20191002T181641Z\nLOCATION:312 Boren Ave South\\nSeattle WA 98144\\nUSA\nSEQUENCE:0\nSUMMARY:Truline Swaybar Bushing Installation\nTRANSP:OPAQUE\nUID:2DC25870-241F-4279-9720-AB26C8DA5A60\nURL;VALUE=URI:\nX-APPLE-STRUCTURED-LOCATION;VALUE=URI;X-ADDRESS=312 Boren Ave South\\\\nSe\n attle WA 98144\\\\nUSA;X-APPLE-ABUID=Doug Tate Tru-Line’s Work;X-APPLE-MAP\n KIT-HANDLE=CAESjQIIwjsaEglN7OsKx8xHQBF/pyRGKpRewCKEAQoNVW5pdGVkIFN0YXRlc\n xICVVMaCldhc2hpbmd0b24iAldBKgRLaW5nMgdTZWF0dGxlOgU5ODE0NEIIQXRsYW50aWNSC\n 0JvcmVuIEF2ZSBTWgMzMTJiDzMxMiBCb3JlbiBBdmUgU4oBEENlbnRyYWwgRGlzdHJpY3SKA\n QhBdGxhbnRpYyoPMzEyIEJvcmVuIEF2ZSBTMg8zMTIgQm9yZW4gQXZlIFMyElNlYXR0bGUsI\n FdBICA5ODE0NDINVW5pdGVkIFN0YXRlczg5QARaJAoiEhIJTezrCsfMR0ARf6ckRiqUXsAYw\n jsgodmfx+vg0YSuAQ==;X-APPLE-RADIUS=22.28845908357249;X-APPLE-REFERENCEFR\n AME=1;X-TITLE=312 Boren Ave South\\\\nSeattle WA 98144\\\\nUSA:geo:47.599824\n ,-122.315080\nX-APPLE-TRAVEL-ADVISORY-BEHAVIOR:DISABLED\nBEGIN:VALARM\nACTION:DISPLAY\nDESCRIPTION:Reminder\nTRIGGER:-PT30M\nUID:02D84865-7611-4380-9B6E-41EAE7D4A6C8\nX-WR-ALARMUID:02D84865-7611-4380-9B6E-41EAE7D4A6C8\nEND:VALARM\nBEGIN:VALARM\nACTION:DISPLAY\nDESCRIPTION:Reminder\nTRIGGER:-P1D\nUID:087E2F5A-0104-4DAE-B6C7-E63A50A52B03\nX-WR-ALARMUID:087E2F5A-0104-4DAE-B6C7-E63A50A52B03\nEND:VALARM\nEND:VEVENT\nEND:VCALENDAR\n";
+        let ical = r#"BEGIN:VCALENDAR
+CALSCALE:GREGORIAN
+PRODID:-//Apple Inc.//iOS 13.2//EN
+VERSION:2.0
+BEGIN:VTIMEZONE
+TZID:America/Vancouver
+BEGIN:DAYLIGHT
+DTSTART:20070311T020000
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU
+TZNAME:GMT-7
+TZOFFSETFROM:-0800
+TZOFFSETTO:-0700
+END:DAYLIGHT
+BEGIN:STANDARD
+DTSTART:20071104T020000
+RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
+TZNAME:GMT-8
+TZOFFSETFROM:-0700
+TZOFFSETTO:-0800
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+CREATED:20191002T181641Z
+DTEND;TZID=America/Vancouver:20191014T090000
+DTSTAMP:20191014T050818Z
+DTSTART;TZID=America/Vancouver:20191014T070000
+LAST-MODIFIED:20191002T181641Z
+LOCATION:312 Boren Ave South\nSeattle WA 98144\nUSA
+SEQUENCE:0
+SUMMARY:Truline Swaybar Bushing Installation
+TRANSP:OPAQUE
+UID:2DC25870-241F-4279-9720-AB26C8DA5A60
+URL;VALUE=URI:
+X-APPLE-STRUCTURED-LOCATION;VALUE=URI;X-ADDRESS=312 Boren Ave South\\nSe
+ attle WA 98144\\nUSA;X-APPLE-ABUID=Doug Tate Tru-Line’s Work;X-APPLE-MAP
+ KIT-HANDLE=CAESjQIIwjsaEglN7OsKx8xHQBF/pyRGKpRewCKEAQoNVW5pdGVkIFN0YXRlc
+ xICVVMaCldhc2hpbmd0b24iAldBKgRLaW5nMgdTZWF0dGxlOgU5ODE0NEIIQXRsYW50aWNSC
+ 0JvcmVuIEF2ZSBTWgMzMTJiDzMxMiBCb3JlbiBBdmUgU4oBEENlbnRyYWwgRGlzdHJpY3SKA
+ QhBdGxhbnRpYyoPMzEyIEJvcmVuIEF2ZSBTMg8zMTIgQm9yZW4gQXZlIFMyElNlYXR0bGUsI
+ FdBICA5ODE0NDINVW5pdGVkIFN0YXRlczg5QARaJAoiEhIJTezrCsfMR0ARf6ckRiqUXsAYw
+ jsgodmfx+vg0YSuAQ==;X-APPLE-RADIUS=22.28845908357249;X-APPLE-REFERENCEFR
+ AME=1;X-TITLE=312 Boren Ave South\\nSeattle WA 98144\\nUSA:geo:47.599824
+ ,-122.315080
+X-APPLE-TRAVEL-ADVISORY-BEHAVIOR:DISABLED
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:Reminder
+TRIGGER:-PT30M
+UID:02D84865-7611-4380-9B6E-41EAE7D4A6C8
+X-WR-ALARMUID:02D84865-7611-4380-9B6E-41EAE7D4A6C8
+END:VALARM
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:Reminder
+TRIGGER:-P1D
+UID:087E2F5A-0104-4DAE-B6C7-E63A50A52B03
+X-WR-ALARMUID:087E2F5A-0104-4DAE-B6C7-E63A50A52B03
+END:VALARM
+END:VEVENT
+END:VCALENDAR
+"#;
+
+        let parsed = Ical::parse(&LineIterator::new(ical));
+        assert!(parsed.is_ok());
+        let cal = parsed.unwrap();
+
+        let apple_location = &cal.children[1].properties[11];
+        assert_eq!(apple_location.name, "X-APPLE-STRUCTURED-LOCATION");
+        assert_eq!(apple_location.value, "geo:47.599824,-122.315080");
     }
 }
