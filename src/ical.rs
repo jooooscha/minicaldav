@@ -191,6 +191,8 @@ impl Property {
 
     /// Parses the given input to a Property instance.
     pub fn parse(input: &str) -> Result<Self, Error> {
+        // Find position of the first colon (separation between name and value) that is not
+        // enclosed in `"`.
         let mut name = String::new();
         let mut value = String::new();
         let mut read_value = false;
@@ -573,6 +575,41 @@ END:VCALENDAR
         };
 
         assert_eq!(ical.serialize(), expectation);
+    }
+
+    /// This test uses a two-byte char to check whether they are correctly treated.
+    #[test]
+    fn test_ical_with_umlaut_in_property() {
+        let ical = r#"BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Open-Xchange//7.10.6-Rev16//EN
+BEGIN:VEVENT
+ATTENDEE;CN="Alice Rüd";RSVP=TRUE;EMAIL=alice@example.com:mailto:alice@example.com
+DTEND;TZID=Europe/Berlin:20210808T220000
+DTSTART;TZID=Europe/Berlin:20210808T200000
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Let's go and find something to eat
+TRANSP:OPAQUE
+UID:5dd6eacd-c03d-4a47-b2b4-327486fc000c
+END:VEVENT
+END:VCALENDAR"#;
+
+        let parsed = Ical::parse(&LineIterator::new(ical));
+        assert!(parsed.is_ok());
+        let cal = parsed.unwrap();
+        assert_eq!(
+            cal.children[0].properties[0],
+            Property::new_with_attributes(
+                "ATTENDEE",
+                "mailto:alice@example.com",
+                vec![
+                    ("RSVP", "TRUE"),
+                    ("EMAIL", "alice@example.com"),
+                    ("CN", "\"Alice Rüd\"")
+                ]
+            )
+        );
     }
 
     #[test]
