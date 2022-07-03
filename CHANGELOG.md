@@ -2,6 +2,11 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.2.0 - 2022-07-03
+#### Features
+- Add test for multi-byte chars in icalendar properties - (6ec40f0) - mutluler
+- - -
+
 ## v0.1.10 - 2022-06-26
 #### Bug Fixes
 - Support parsing apple location properties - (73a7994) - Florian Loers
