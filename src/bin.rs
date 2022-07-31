@@ -16,6 +16,9 @@
 
 //! Simple CLI tool mostly for testing purposes currently.
 
+#[macro_use]
+extern crate log;
+
 #[cfg(feature = "cli")]
 mod api;
 #[cfg(feature = "cli")]
@@ -28,6 +31,8 @@ pub fn main() {}
 
 #[cfg(feature = "cli")]
 pub fn main() {
+    env_logger::init();
+
     use ureq::Agent;
     use url::Url;
 
@@ -56,7 +61,8 @@ pub fn main() {
         } else {
             read("Enter email")
         };
-        let password = rpassword::read_password_from_tty(Some("Password: ")).unwrap();
+        println!("Enter password");
+        let password = rpassword::read_password().unwrap();
         (url, email, password)
     }
 
@@ -99,7 +105,7 @@ pub fn main() {
             for calendar in calendars {
                 if calendar.name() == &name {
                     let events = api::get_events(agent.clone(), &user, &pswd, &calendar).unwrap();
-                    for event in events {
+                    for event in events.0 {
                         for (k, v) in event.properties() {
                             println!("{}: {}", k, v);
                         }

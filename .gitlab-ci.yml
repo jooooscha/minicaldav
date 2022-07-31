@@ -46,7 +46,7 @@ formatting & clippy:
   script:
     - source $HOME/.cargo/env
     - cargo fmt --all -- --color=always --check
-    - cargo clippy --no-deps -- -Dwarnings
+    - cargo clippy --lib --no-deps -- -Dwarnings
 
 outdated & audit:
   image: registry.gitlab.com/loers/minicaldav/x86-64:main

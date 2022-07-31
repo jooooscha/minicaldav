@@ -81,11 +81,19 @@ pub fn save_event(
     agent: Agent,
     username: &str,
     password: &str,
-    event: Event,
+    mut event: Event,
 ) -> Result<Event, Error> {
+    for prop in &mut event.ical.properties {
+        if prop.name == "SEQUENCE" {
+            if let Ok(num) = prop.value.parse::<i64>() {
+                prop.value = format!("{}", num + 1);
+            }
+        }
+    }
+
     let event_ref = caldav::EventRef {
         data: event.ical.serialize(),
-        etag: event.etag,
+        etag: None,
         url: event.url,
     };
     let event_ref = caldav::save_event(agent, username, password, event_ref)?;
@@ -129,7 +137,7 @@ impl Calendar {
 }
 
 /// A event in a CalDAV calendar.
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Event {
     etag: Option<String>,
     url: Url,
@@ -155,12 +163,38 @@ impl Event {
         })
     }
 
+    /// Get the property of the given name or `None`.
+    pub fn pop_property(&mut self, name: &str) -> Option<Property> {
+        self.ical.get_mut("VEVENT").and_then(|ical| {
+            let index = ical.properties.iter().enumerate().find_map(|(i, p)| {
+                if p.name == name {
+                    Some(i)
+                } else {
+                    None
+                }
+            });
+
+            if let Some(index) = index {
+                Some(Property::from(ical.properties.remove(index)))
+            } else {
+                None
+            }
+        })
+    }
+
+    pub fn add(&mut self, property: Property) {
+        if let Some(ical) = self.ical.get_mut("VEVENT") {
+            ical.properties.push(property.into());
+        }
+    }
+
     /// Get the value of the given property name or `None`.
     pub fn get(&self, name: &str) -> Option<&String> {
-        self.ical
-            .properties
-            .iter()
-            .find_map(|p| if p.name == name { Some(&p.value) } else { None })
+        self.ical.get("VEVENT").and_then(|ical| {
+            ical.properties
+                .iter()
+                .find_map(|p| if p.name == name { Some(&p.value) } else { None })
+        })
     }
 
     /// Get all properties of this event.
@@ -179,6 +213,15 @@ impl Event {
             })
     }
 
+    pub fn into_properties(self) -> Vec<Property> {
+        for ical in self.ical.children {
+            if ical.name == "VEVENT" {
+                return ical.properties.into_iter().map(Property::from).collect();
+            }
+        }
+        Vec::new()
+    }
+
     pub fn etag(&self) -> Option<&String> {
         self.etag.as_ref()
     }
@@ -192,7 +235,16 @@ impl Event {
     }
 }
 
-#[derive(Debug)]
+#[cfg(not(feature = "ser_de"))]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Property {
+    name: String,
+    value: String,
+    attributes: HashMap<String, String>,
+}
+
+#[cfg(feature = "ser_de")]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Property {
     name: String,
     value: String,
@@ -208,6 +260,10 @@ impl Property {
         &self.value
     }
 
+    pub fn into_value(self) -> String {
+        self.value
+    }
+
     pub fn attribute(&self, name: &str) -> Option<&String> {
         self.attributes.get(name)
     }
@@ -215,6 +271,16 @@ impl Property {
 
 impl From<ical::Property> for Property {
     fn from(p: ical::Property) -> Self {
+        Self {
+            name: p.name,
+            value: p.value,
+            attributes: p.attributes,
+        }
+    }
+}
+
+impl From<Property> for ical::Property {
+    fn from(p: Property) -> Self {
         Self {
             name: p.name,
             value: p.value,

@@ -43,6 +43,15 @@ impl Ical {
         }
         None
     }
+    /// Get the child container which has the given name.
+    pub fn get_mut(&mut self, child_name: &str) -> Option<&mut Ical> {
+        for c in &mut self.children {
+            if c.name == child_name {
+                return Some(c);
+            }
+        }
+        None
+    }
     /// Parse the given lines to an ICAL container.
     pub fn parse(lines: &LineIterator) -> Result<Self, Error> {
         let mut ical: Option<Ical> = None;
@@ -80,7 +89,7 @@ impl Ical {
 
             if ical.is_none() {
                 if let Some(name) = prop.is("BEGIN") {
-                    ical = Some(Ical::new(name.clone()));
+                    ical = Some(Ical::new(name.trim().to_string()));
                 }
                 continue;
             }
@@ -92,7 +101,9 @@ impl Ical {
                 continue;
             }
             if let Some(name) = prop.is("END") {
-                if ical.is_some() && Some(name) == ical.as_ref().map(|ical| &ical.name) {
+                if ical.is_some()
+                    && Some(name.as_str()) == ical.as_ref().map(|ical| ical.name.trim())
+                {
                     if let Some(ical) = ical {
                         return Ok(ical);
                     }
@@ -106,13 +117,14 @@ impl Ical {
         }
         if ical.is_some() {
             Err(Error::new(format!(
-                "Missing END:{:?}",
-                ical.map(|i| i.name)
+                "Missing END:{}",
+                ical.map(|i| i.name).unwrap_or_else(|| "".to_string())
             )))
         } else {
             Err(Error::new("Invalid input".into()))
         }
     }
+
     /// Get ICAL formatted string of this container.
     pub fn serialize(&self) -> String {
         let mut string = String::new();

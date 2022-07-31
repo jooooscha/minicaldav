@@ -45,7 +45,7 @@ pub fn propfind_get(
     let content = client
         .request("PROPFIND", url.as_str())
         .set("Authorization", &auth)
-        .set("CONTENT_TYPE", "application/xml")
+        .set("Content-Type", "application/xml")
         .set("Depth", depth)
         .send_bytes(body.as_bytes())?
         .into_string()
