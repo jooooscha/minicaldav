@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "minicaldav"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Florian Loers"]
 description = "Minimal caldav client"
 readme = "README.md"

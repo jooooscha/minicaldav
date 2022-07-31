@@ -2,6 +2,11 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.3.0 - 2022-07-31
+#### Features
+- Handle SEQUENCE property in event updates - (30be69c) - Florian Loers
+- - -
+
 ## v0.2.0 - 2022-07-03
 #### Features
 - Add test for multi-byte chars in icalendar properties - (6ec40f0) - mutluler
