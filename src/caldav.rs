@@ -336,7 +336,7 @@ pub fn get_events(
         .request("REPORT", calendar_ref.url.as_str())
         .set("Authorization", &auth)
         .set("Depth", "1")
-        .set("CONTENT_TYPE", "application/xml")
+        .set("Content-Type", "application/xml")
         .send_bytes(CALENDAR_EVENTS_REQUEST.as_bytes())?
         .into_string()
         .map_err(|e| Error {
