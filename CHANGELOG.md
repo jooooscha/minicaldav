@@ -2,6 +2,11 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.3.1 - 2022-08-28
+#### Bug Fixes
+- set Content-Type instead of CONTENT_TYPE - (12609e0) - Moritz Bitsch
+- - -
+
 ## v0.3.0 - 2022-07-31
 #### Features
 - Handle SEQUENCE property in event updates - (30be69c) - Florian Loers
