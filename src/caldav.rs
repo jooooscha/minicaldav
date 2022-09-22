@@ -242,7 +242,7 @@ pub fn get_calendars(
                         if let Some(child) = c.as_element() {
                             if child.name == "comp" {
                                 if let Some(name) = child.attributes.get("name") {
-                                    if name == "VEVENT" {
+                                    if (name == "VEVENT") || (name == "VTODO") {
                                         return true;
                                     }
                                 }
@@ -319,6 +319,20 @@ pub static CALENDAR_EVENTS_REQUEST: &str = r#"
     </c:calendar-query>
 "#;
 
+pub static CALENDAR_TODOS_REQUEST: &str = r#"
+    <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+        <d:prop>
+            <d:getetag />
+            <c:calendar-data />
+        </d:prop>
+        <c:filter>
+            <c:comp-filter name="VCALENDAR">
+                <c:comp-filter name="VTODO" />
+            </c:comp-filter>
+        </c:filter>
+    </c:calendar-query>
+"#;
+
 /// Get ICAL formatted events from the CalDAV server.
 pub fn get_events(
     client: Agent,
@@ -382,6 +396,71 @@ pub fn get_events(
     }
 
     Ok(events)
+}
+
+/// Get ICAL formatted todos from the CalDAV server.
+pub fn get_todos(
+    client: Agent,
+    username: &str,
+    password: &str,
+    base_url: &Url,
+    calendar_ref: &CalendarRef,
+) -> Result<Vec<EventRef>, Error> {
+    let auth = format!(
+        "Basic {}",
+        base64::encode(format!("{}:{}", username, password))
+    );
+
+    let content = client
+        .request("REPORT", calendar_ref.url.as_str())
+        .set("Authorization", &auth)
+        .set("Depth", "1")
+        .set("CONTENT_TYPE", "application/xml")
+        .send_bytes(CALENDAR_TODOS_REQUEST.as_bytes())?
+        .into_string()
+        .map_err(|e| Error {
+            kind: ErrorKind::Parsing,
+            message: e.to_string(),
+        })?;
+
+    trace!("Read CalDAV events: {:?}", content);
+    let reader = content.as_bytes();
+
+    let root = xmltree::Element::parse(reader)?;
+    let mut todos = Vec::new();
+    for c in &root.children {
+        if let Some(child) = c.as_element() {
+            let href = child.get_child("href").and_then(|e| e.get_text());
+            let etag = child
+                .get_child("propstat")
+                .and_then(|e| e.get_child("prop"))
+                .and_then(|e| e.get_child("getetag"))
+                .and_then(|e| e.get_text())
+                .map(|e| e.to_string());
+            let data = child
+                .get_child("propstat")
+                .and_then(|e| e.get_child("prop"))
+                .and_then(|e| e.get_child("calendar-data"))
+                .and_then(|e| e.get_text());
+            if href.is_none() || etag.is_none() || data.is_none() {
+                continue;
+            }
+
+            if let Some((href, data)) = href.and_then(|href| data.map(|data| (href, data))) {
+                if let Ok(url) = base_url.join(&href) {
+                    todos.push(EventRef {
+                        url,
+                        data: data.to_string(),
+                        etag,
+                    })
+                } else {
+                    error!("Could not parse url {}/{}", base_url, href)
+                }
+            }
+        }
+    }
+
+    Ok(todos)
 }
 
 /// Save the given event on the CalDAV server.

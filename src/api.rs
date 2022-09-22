@@ -41,6 +41,41 @@ pub fn get_calendars(
     Ok(calendars)
 }
 
+/// Get all todos in the given `Calendar`.
+/// This function returns a tuple of all todos that could be parsed and all todos that couldn't.
+/// If anything besides parsing the todo data fails, an Err will be returned.
+pub fn get_todos(
+    agent: Agent,
+    username: &str,
+    password: &str,
+    calendar: &Calendar,
+) -> Result<(Vec<Event>, Vec<Error>), Error> {
+    let todo_refs = caldav::get_todos(
+        agent,
+        username,
+        password,
+        &calendar.base_url,
+        &calendar.inner,
+    )?;
+    let mut todos = Vec::new();
+    let mut errors = Vec::new();
+    for todo_ref in todo_refs {
+        let lines = ical::LineIterator::new(&todo_ref.data);
+        match ical::Ical::parse(&lines) {
+            Ok(ical) => todos.push(Event {
+                url: todo_ref.url.clone(),
+                etag: todo_ref.etag.clone(),
+                ical,
+            }),
+            Err(e) => errors.push(Error::Ical(format!(
+                "Could not parse todo {}: {:?}",
+                todo_ref.data, e
+            ))),
+        }
+    }
+    Ok((todos, errors))
+}
+
 /// Get all events in the given `Calendar`.
 /// This function returns a tuple of all events that could be parsed and all events that couldn't.
 /// If anything besides parsing the event data fails, an Err will be returned.
@@ -150,9 +185,8 @@ impl Event {
         &self.url
     }
 
-    /// Get the property of the given name or `None`.
-    pub fn property(&self, name: &str) -> Option<Property> {
-        self.ical.get("VEVENT").and_then(|ical| {
+    fn get_property(&self, name: &str, datatype: &str) -> Option<Property> {
+        self.ical.get(datatype).and_then(|ical| {
             ical.properties.iter().find_map(|p| {
                 if p.name == name {
                     Some(Property::from(p.clone()))
@@ -188,6 +222,15 @@ impl Event {
         }
     }
 
+    pub fn property(&self, name: &str) -> Option<Property> {
+        self.get_property(name, "VEVENT")
+    }
+
+    /// Get the property of the given name or `None`.
+    pub fn property_todo(&self, name: &str) -> Option<Property> {
+        self.get_property(name, "VTODO")
+    }
+
     /// Get the value of the given property name or `None`.
     pub fn get(&self, name: &str) -> Option<&String> {
         self.ical.get("VEVENT").and_then(|ical| {
@@ -198,9 +241,9 @@ impl Event {
     }
 
     /// Get all properties of this event.
-    pub fn properties(&self) -> Vec<(&String, &String)> {
+    fn get_properties(&self, datatype: &str) -> Vec<(&String, &String)> {
         self.ical
-            .get("VEVENT")
+            .get(datatype)
             .map(|ical| {
                 ical.properties
                     .iter()
@@ -220,6 +263,16 @@ impl Event {
             }
         }
         Vec::new()
+    }
+
+    /// Get all properties of this event.
+    pub fn properties(&self) -> Vec<(&String, &String)> {
+        self.get_properties("VEVENT")
+    }
+
+    /// Get all properties of this todo.
+    pub fn properties_todo(&self) -> Vec<(&String, &String)> {
+        self.get_properties("VTODO")
     }
 
     pub fn etag(&self) -> Option<&String> {
@@ -316,7 +369,7 @@ pub struct EventBuilder {
 }
 
 impl EventBuilder {
-    pub fn build(self) -> Event {
+    fn build_event(self, name: String) -> Event {
         Event {
             etag: self.etag,
             url: self.url,
@@ -324,12 +377,20 @@ impl EventBuilder {
                 name: "VCALENDAR".into(),
                 properties: vec![],
                 children: vec![ical::Ical {
-                    name: "VEVENT".into(),
+                    name,
                     properties: self.properties,
                     children: vec![],
                 }],
             },
         }
+    }
+
+    pub fn build(self) -> Event {
+        self.build_event("VEVENT".into())
+    }
+
+    pub fn build_todo(self) -> Event {
+        self.build_event("VTODO".into())
     }
 
     pub fn etag(mut self, etag: Option<String>) -> Self {
@@ -358,6 +419,42 @@ impl EventBuilder {
     pub fn summary(mut self, value: String) -> Self {
         self.properties.push(ical::Property {
             name: "SUMMARY".to_string(),
+            value,
+            attributes: HashMap::new(),
+        });
+        self
+    }
+
+    pub fn priority(mut self, value: String) -> Self {
+        self.properties.push(ical::Property {
+            name: "PRIORITY".to_string(),
+            value,
+            attributes: HashMap::new(),
+        });
+        self
+    }
+
+    pub fn duedate(mut self, value: String) -> Self {
+        self.properties.push(ical::Property {
+            name: "DUE".to_string(),
+            value,
+            attributes: HashMap::new(),
+        });
+        self
+    }
+
+    pub fn status(mut self, value: String) -> Self {
+        self.properties.push(ical::Property {
+            name: "STATUS".to_string(),
+            value,
+            attributes: HashMap::new(),
+        });
+        self
+    }
+
+    pub fn generic(mut self, name: String, value: String) -> Self {
+        self.properties.push(ical::Property {
+            name,
             value,
             attributes: HashMap::new(),
         });

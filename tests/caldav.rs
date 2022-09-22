@@ -184,6 +184,7 @@ mod mock {
 
 const USERNAME: &str = "foo";
 const PASSWORD: &str = "bar";
+const NCAL: usize = 4;
 
 fn get_client() -> Agent {
     ureq::AgentBuilder::new().build()
@@ -230,7 +231,7 @@ pub fn test_get_calendars_without_homeset() {
     let base_url = Url::parse(&format!("http://{}", CALDAV_BASE_URL)).unwrap();
     let calendars =
         get_calendars(client, USERNAME, PASSWORD, &base_url).expect("Failed to get calendars");
-    assert_eq!(calendars.len(), 2);
+    assert_eq!(calendars.len(), NCAL);
     assert_eq!(calendars.get(0).unwrap().name, "Calendar");
     assert_eq!(calendars.get(1).unwrap().name, "Birthdays");
     mockserver.end();
@@ -245,7 +246,7 @@ pub fn test_get_calendars() {
     let base_url = Url::parse(&format!("http://{}", CALDAV_BASE_URL)).unwrap();
     let calendars =
         get_calendars(client, USERNAME, PASSWORD, &base_url).expect("Failed to get calendars");
-    assert_eq!(calendars.len(), 2);
+    assert_eq!(calendars.len(), NCAL);
     assert_eq!(calendars.get(0).unwrap().name, "Calendar");
     assert_eq!(calendars.get(1).unwrap().name, "Birthdays");
     mockserver.end();
@@ -260,7 +261,7 @@ pub fn test_get_events() {
     let base_url = Url::parse(&format!("http://{}", CALDAV_BASE_URL)).unwrap();
     let calendars = get_calendars(client.clone(), USERNAME, PASSWORD, &base_url)
         .expect("Failed to get calendars");
-    assert_eq!(calendars.len(), 2);
+    assert_eq!(calendars.len(), NCAL);
     assert_eq!(calendars.get(0).unwrap().name, "Calendar");
     assert_eq!(calendars.get(1).unwrap().name, "Birthdays");
 
@@ -320,7 +321,7 @@ pub fn test_save_events() {
     let base_url = Url::parse(&format!("http://{}", CALDAV_BASE_URL)).unwrap();
     let calendars = get_calendars(client.clone(), USERNAME, PASSWORD, &base_url)
         .expect("Failed to get calendars");
-    assert_eq!(calendars.len(), 2);
+    assert_eq!(calendars.len(), NCAL);
     assert_eq!(calendars.get(0).unwrap().name, "Calendar");
     assert_eq!(calendars.get(1).unwrap().name, "Birthdays");
 
@@ -350,7 +351,7 @@ pub fn test_delete_events() {
     let base_url = Url::parse(&format!("http://{}", CALDAV_BASE_URL)).unwrap();
     let calendars = get_calendars(client.clone(), USERNAME, PASSWORD, &base_url)
         .expect("Failed to get calendars");
-    assert_eq!(calendars.len(), 2);
+    assert_eq!(calendars.len(), NCAL);
     assert_eq!(calendars.get(0).unwrap().name, "Calendar");
     assert_eq!(calendars.get(1).unwrap().name, "Birthdays");
 
