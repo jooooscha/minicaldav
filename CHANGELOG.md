@@ -2,6 +2,9 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.3.2 - 2022-09-22
+- - -
+
 ## v0.3.1 - 2022-08-28
 #### Bug Fixes
 - set Content-Type instead of CONTENT_TYPE - (12609e0) - Moritz Bitsch
