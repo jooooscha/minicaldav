@@ -169,6 +169,9 @@ impl Calendar {
     pub fn name(&self) -> &String {
         &self.inner.name
     }
+    pub fn color(&self) -> Option<&String> {
+        self.inner.color.as_ref()
+    }
 }
 
 /// A event in a CalDAV calendar.

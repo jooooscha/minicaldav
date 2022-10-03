@@ -17,6 +17,7 @@
 //! Implementation of ICAL parsing.
 
 use std::collections::HashMap;
+use std::fmt::Write as _;
 
 /// A ICAL container. Can have properties or child ICAL containers.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -128,7 +129,7 @@ impl Ical {
     /// Get ICAL formatted string of this container.
     pub fn serialize(&self) -> String {
         let mut string = String::new();
-        string.push_str(&format!("BEGIN:{}\n", self.name));
+        let _ = writeln!(string, "BEGIN:{}", self.name);
         for prop in &self.properties {
             string.push_str(&prop.serialize());
             string.push('\n');
@@ -136,7 +137,7 @@ impl Ical {
         for child in &self.children {
             string.push_str(&child.serialize());
         }
-        string.push_str(&format!("END:{}\n", self.name));
+        let _ = writeln!(string, "END:{}", self.name);
         string
     }
 }

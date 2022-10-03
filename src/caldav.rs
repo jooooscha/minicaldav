@@ -157,6 +157,7 @@ pub static CALENDARS_REQUEST: &str = r#"
     <d:prop>
         <d:displayname />
         <d:resourcetype />
+        <calendar-color xmlns="http://apple.com/ns/ical/" />
         <c:supported-calendar-component-set />
     </d:prop>
 </d:propfind>
@@ -167,6 +168,7 @@ pub static CALENDARS_QUERY: &str = r#"
     <d:prop>
         <d:getetag />
         <d:displayname />
+        <calendar-color xmlns="http://apple.com/ns/ical/" />
         <d:resourcetype />
         <c:supported-calendar-component-set />
     </d:prop>
@@ -222,10 +224,16 @@ pub fn get_calendars(
 
     for response in &root.children {
         if let Some(response) = response.as_element() {
+            println!("{:?}", response);
             let name = response
                 .get_child("propstat")
                 .and_then(|e| e.get_child("prop"))
                 .and_then(|e| e.get_child("displayname"))
+                .and_then(|e| e.get_text());
+            let color = response
+                .get_child("propstat")
+                .and_then(|e| e.get_child("prop"))
+                .and_then(|e| e.get_child("calendar-color"))
                 .and_then(|e| e.get_text());
             let is_calendar = response
                 .get_child("propstat")
@@ -262,6 +270,7 @@ pub fn get_calendars(
                     calendars.push(CalendarRef {
                         url,
                         name: name.to_string(),
+                        color: color.map(|c| c.into()),
                     })
                 } else {
                     error!("Could not parse url: {}/{}", base_url, href);
@@ -277,6 +286,7 @@ pub fn get_calendars(
 pub struct CalendarRef {
     pub url: Url,
     pub name: String,
+    pub color: Option<String>,
 }
 
 impl std::fmt::Debug for CalendarRef {
