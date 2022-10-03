@@ -2,6 +2,11 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.4.0 - 2022-10-03
+#### Features
+- Support calendar colors - (81394f3) - Florian Loers
+- - -
+
 ## v0.3.2 - 2022-09-22
 - - -
 
