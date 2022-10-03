@@ -16,9 +16,11 @@
 
 //! Implementation of ICAL parsing.
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Write as _;
-
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 /// A ICAL container. Can have properties or child ICAL containers.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Ical {
@@ -37,21 +39,11 @@ impl Ical {
     }
     /// Get the child container which has the given name.
     pub fn get(&self, child_name: &str) -> Option<&Ical> {
-        for c in &self.children {
-            if c.name == child_name {
-                return Some(c);
-            }
-        }
-        None
+        self.children.iter().find(|&c| c.name == child_name)
     }
     /// Get the child container which has the given name.
     pub fn get_mut(&mut self, child_name: &str) -> Option<&mut Ical> {
-        for c in &mut self.children {
-            if c.name == child_name {
-                return Some(c);
-            }
-        }
-        None
+        self.children.iter_mut().find(|c| c.name == child_name)
     }
     /// Parse the given lines to an ICAL container.
     pub fn parse(lines: &LineIterator) -> Result<Self, Error> {
@@ -171,6 +163,7 @@ impl<'a> LineIterator<'a> {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 /// An ICAL property. Currently only simple key-value properties are supported.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Property {

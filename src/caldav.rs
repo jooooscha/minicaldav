@@ -16,6 +16,8 @@
 
 //! CalDAV client implementation using ureq.
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 use ureq::Agent;
 use url::Url;
@@ -224,7 +226,6 @@ pub fn get_calendars(
 
     for response in &root.children {
         if let Some(response) = response.as_element() {
-            println!("{:?}", response);
             let name = response
                 .get_child("propstat")
                 .and_then(|e| e.get_child("prop"))
@@ -283,6 +284,7 @@ pub fn get_calendars(
     Ok(calendars)
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct CalendarRef {
     pub url: Url,
     pub name: String,

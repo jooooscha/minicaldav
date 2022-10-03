@@ -5,14 +5,16 @@ Small and easy CalDAV client.
 minicaldav is a caldav client and basic ical parser with as little dependencies as possible (but practical).
 
 ## Project scope:
+
 - Simple: Few dependencies, no async, the code is simple
 - Correct: CalDAV and ICAL are implemented correctly
 - Tested: CalDAV works with Events, and is tested with multiple common services
 - Easy to use: Good documentation and intuitive API
 
 # Project status
+
 - minicaldav is neither correct nor sufficient tested at this point
-    - Tested only with one caldav server
+  - Tested only with one caldav server
 - minicaldav is kind of activley maintained as part of https://gitlab.com/loers/karlender
 - minicaldav is used in a public app: https://gitlab.com/loers/karlender
 
@@ -38,4 +40,32 @@ pub fn main() {
         }
     }
 }
+```
+
+# Features
+
+minicaldav can either provide a ready-to-use caldav client by using all features or provide only parts.
+
+The bare minimum is just the ical types and parser:
+
+```
+minicaldav = { version = "*", default-features = false, features = [ "ical" ] }
+```
+
+If you want to have a caldav client:
+
+```
+minicaldav = { version = "*" }
+```
+
+If you do need serde:
+
+```
+minicaldav = { version = "*", features = [ "serde" ] }
+```
+
+If you want to compile a basic CLI:
+
+```
+cargo build --bin minicaldav-cli --features cli
 ```

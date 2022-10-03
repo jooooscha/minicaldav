@@ -20,6 +20,8 @@ use std::collections::HashMap;
 
 use crate::caldav;
 use crate::ical;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use ureq::Agent;
 use url::Url;
 
@@ -155,6 +157,7 @@ pub fn remove_event(
     Ok(())
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 /// A remote CalDAV calendar.
 #[derive(Debug)]
 pub struct Calendar {
@@ -174,7 +177,8 @@ impl Calendar {
     }
 }
 
-/// A event in a CalDAV calendar.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+/// An event in a CalDAV calendar.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Event {
     etag: Option<String>,
@@ -291,16 +295,8 @@ impl Event {
     }
 }
 
-#[cfg(not(feature = "ser_de"))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Property {
-    name: String,
-    value: String,
-    attributes: HashMap<String, String>,
-}
-
-#[cfg(feature = "ser_de")]
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Property {
     name: String,
     value: String,
@@ -350,6 +346,17 @@ impl From<Property> for ical::Property {
 pub enum Error {
     Ical(String),
     Caldav(String),
+}
+
+impl std::error::Error for Error {}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::Ical(msg) => write!(f, "CalDAV Error: '{}'", msg),
+            Error::Caldav(msg) => write!(f, "ICAL Error: '{}'", msg),
+        }
+    }
 }
 
 impl From<caldav::Error> for Error {

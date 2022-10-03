@@ -45,10 +45,16 @@
 //! }
 //! ```
 
+#[cfg(any(feature = "caldav", feature = "ical"))]
 #[macro_use]
 extern crate log;
 
+#[cfg(feature = "caldav")]
 mod api;
+#[cfg(feature = "caldav")]
 pub mod caldav;
-pub mod ical;
+#[cfg(feature = "caldav")]
 pub use api::*;
+
+#[cfg(feature = "ical")]
+pub mod ical;

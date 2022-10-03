@@ -16,6 +16,7 @@
 
 //! Simple CLI tool mostly for testing purposes currently.
 
+#[cfg(feature = "cli")]
 #[macro_use]
 extern crate log;
 

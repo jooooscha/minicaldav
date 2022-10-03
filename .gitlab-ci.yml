@@ -36,8 +36,8 @@ stages:
   - release
   - post-release
 
-include:
-  - local: /ci/.gitlab-ci-containers.yml
+# include:
+#   - local: /ci/.gitlab-ci-containers.yml
 
 formatting & clippy:
   image: registry.gitlab.com/loers/minicaldav/x86-64:main
