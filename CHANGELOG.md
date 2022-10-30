@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.5.1 - 2022-10-30
+#### Bug Fixes
+- Update project links after move - (6a9fb34) - Florian Loers
+
+- - -
+
 ## v0.5.0 - 2022-10-03
 #### Features
 - Add full serde support for public types - (737c70e) - Florian Loers
