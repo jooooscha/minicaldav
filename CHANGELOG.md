@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.6.0 - 2022-10-30
+#### Features
+- Add Event constructor - (d9d3b68) - Florian Loers
+
+- - -
+
 ## v0.5.1 - 2022-10-30
 #### Bug Fixes
 - Update project links after move - (6a9fb34) - Florian Loers
