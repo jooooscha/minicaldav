@@ -187,6 +187,11 @@ pub struct Event {
 }
 
 impl Event {
+    /// Construct a new event.
+    pub fn new(etag: Option<String>, url: Url, ical: ical::Ical) -> Self {
+        Self { etag, url, ical }
+    }
+
     /// The full url of this event.
     pub fn url(&self) -> &Url {
         &self.url
