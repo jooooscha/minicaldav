@@ -18,7 +18,6 @@
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use std::time::{SystemTime, UNIX_EPOCH};
 use ureq::Agent;
 use url::Url;
 
@@ -285,6 +284,7 @@ pub fn get_calendars(
 }
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone)]
 pub struct CalendarRef {
     pub url: Url,
     pub name: String,
@@ -503,12 +503,7 @@ pub fn save_event(
         })
     } else {
         Ok(EventRef {
-            etag: Some(
-                SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .map(|t| t.as_millis().to_string())
-                    .unwrap_or_else(|_| "0".to_string()),
-            ),
+            etag: None,
             ..event_ref
         })
     }

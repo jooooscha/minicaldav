@@ -167,9 +167,9 @@ pub fn remove_event(
     Ok(())
 }
 
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 /// A remote CalDAV calendar.
-#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Clone)]
 pub struct Calendar {
     base_url: Url,
     inner: caldav::CalendarRef,
@@ -238,6 +238,10 @@ impl Event {
         })
     }
 
+    pub fn ical(&self) -> &Ical {
+        &self.ical
+    }
+
     pub fn add(&mut self, property: Property) {
         if let Some(ical) = self.ical.get_mut("VEVENT") {
             ical.properties.push(property.into());
@@ -260,6 +264,30 @@ impl Event {
                 .iter()
                 .find_map(|p| if p.name == name { Some(&p.value) } else { None })
         })
+    }
+
+    /// Set the value of the given property name or create a new property.
+    pub fn set(&mut self, name: &str, value: &str) {
+        match self
+            .ical
+            .get_mut("VEVENT")
+            .and_then(|e| e.properties.iter_mut().find(|p| p.name == name))
+        {
+            Some(p) => {
+                p.value = value.into();
+            }
+            None => self.add(Property::new(name, value)),
+        }
+    }
+
+    pub fn set_property_attribute(&mut self, name: &str, attr_name: &str, attr_value: &str) {
+        if let Some(p) = self
+            .ical
+            .get_mut("VEVENT")
+            .and_then(|e| e.properties.iter_mut().find(|p| p.name == name))
+        {
+            p.attributes.insert(attr_name.into(), attr_value.into());
+        }
     }
 
     /// Get all properties of this event.
@@ -308,6 +336,10 @@ impl Event {
             properties: vec![],
         }
     }
+
+    pub fn set_etag(&mut self, etag: Option<String>) {
+        self.etag = etag
+    }
 }
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -319,6 +351,13 @@ pub struct Property {
 }
 
 impl Property {
+    pub fn new(name: &str, value: &str) -> Self {
+        Self {
+            name: name.into(),
+            value: value.into(),
+            attributes: Default::default(),
+        }
+    }
     pub fn name(&self) -> &String {
         &self.name
     }
