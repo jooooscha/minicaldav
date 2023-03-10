@@ -64,6 +64,7 @@ pub fn main() {
         };
         println!("Enter password");
         let password = rpassword::read_password().unwrap();
+        println!("loading...");
         (url, email, password)
     }
 

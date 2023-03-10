@@ -270,7 +270,7 @@ pub fn test_get_events() {
         USERNAME,
         PASSWORD,
         &base_url,
-        calendars.get(0).unwrap(),
+        &calendars.get(0).unwrap().url,
     )
     .expect("Failed to get events");
 
@@ -279,7 +279,7 @@ pub fn test_get_events() {
         USERNAME,
         PASSWORD,
         &base_url,
-        calendars.get(1).unwrap(),
+        &calendars.get(1).unwrap().url,
     )
     .expect("Failed to get birthdays");
 
@@ -325,8 +325,8 @@ pub fn test_save_events() {
     assert_eq!(calendars.get(0).unwrap().name, "Calendar");
     assert_eq!(calendars.get(1).unwrap().name, "Birthdays");
 
-    let calendar = &calendars.get(0).unwrap();
-    let events = get_events(client.clone(), USERNAME, PASSWORD, &base_url, calendar)
+    let calendar = calendars.get(0).unwrap();
+    let events = get_events(client.clone(), USERNAME, PASSWORD, &base_url, &calendar.url)
         .expect("Failed to get events");
 
     assert_eq!(events.len(), 4);
@@ -355,8 +355,8 @@ pub fn test_delete_events() {
     assert_eq!(calendars.get(0).unwrap().name, "Calendar");
     assert_eq!(calendars.get(1).unwrap().name, "Birthdays");
 
-    let calendar = &calendars.get(0).unwrap();
-    let events = get_events(client.clone(), USERNAME, PASSWORD, &base_url, calendar)
+    let calendar = calendars.get(0).unwrap();
+    let events = get_events(client.clone(), USERNAME, PASSWORD, &base_url, &calendar.url)
         .expect("Failed to get events");
 
     assert_eq!(events.len(), 4);

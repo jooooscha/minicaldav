@@ -20,6 +20,7 @@ use std::collections::HashMap;
 
 use crate::caldav;
 use crate::ical;
+use crate::ical::Ical;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use ureq::Agent;
@@ -92,7 +93,7 @@ pub fn get_events(
         username,
         password,
         &calendar.base_url,
-        &calendar.inner,
+        calendar.url(),
     )?;
     let mut events = Vec::new();
     let mut errors = Vec::new();
@@ -111,6 +112,15 @@ pub fn get_events(
         }
     }
     Ok((events, errors))
+}
+
+/// Parses the given string into the Ical struct.
+pub fn parse_ical(raw: &str) -> Result<Ical, Error> {
+    let lines = ical::LineIterator::new(raw);
+    match ical::Ical::parse(&lines) {
+        Ok(ical) => Ok(ical),
+        Err(e) => Err(Error::Ical(format!("Could not parse event: {:?}", e))),
+    }
 }
 
 /// Save the given event on the CalDAV server.

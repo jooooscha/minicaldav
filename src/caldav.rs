@@ -351,7 +351,7 @@ pub fn get_events(
     username: &str,
     password: &str,
     base_url: &Url,
-    calendar_ref: &CalendarRef,
+    calendar_url: &Url,
 ) -> Result<Vec<EventRef>, Error> {
     let auth = format!(
         "Basic {}",
@@ -359,7 +359,7 @@ pub fn get_events(
     );
 
     let content = client
-        .request("REPORT", calendar_ref.url.as_str())
+        .request("REPORT", calendar_url.as_str())
         .set("Authorization", &auth)
         .set("Depth", "1")
         .set("Content-Type", "application/xml")
