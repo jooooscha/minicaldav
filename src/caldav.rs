@@ -427,7 +427,7 @@ pub fn get_todos(
         .request("REPORT", calendar_ref.url.as_str())
         .set("Authorization", &auth)
         .set("Depth", "1")
-        .set("CONTENT_TYPE", "application/xml")
+        .set("Content-Type", "application/xml")
         .send_bytes(CALENDAR_TODOS_REQUEST.as_bytes())?
         .into_string()
         .map_err(|e| Error {
