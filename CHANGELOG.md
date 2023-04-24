@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.7.0 - 2023-04-24
+#### Bug Fixes
+- set Content-Type instead of CONTENT_TYPE when getting todos - (dcd6ea6) - Thomas Krause
+#### Features
+- Provide str parsing to ICal struct - (294f329) - Florian Loers
+- Provide str parsing to ICal struct - (b13eb94) - Florian Loers
+
+- - -
+
 ## v0.6.0 - 2022-10-30
 #### Features
 - Add Event constructor - (d9d3b68) - Florian Loers
