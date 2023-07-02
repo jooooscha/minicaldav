@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.8.0 - 2023-07-02
+#### Features
+- Support Bearer tokens - (1725a58) - Florian Loers
+
+- - -
+
 ## v0.7.0 - 2023-04-24
 #### Bug Fixes
 - set Content-Type instead of CONTENT_TYPE when getting todos - (dcd6ea6) - Thomas Krause
