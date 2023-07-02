@@ -26,14 +26,15 @@ use serde::{Deserialize, Serialize};
 use ureq::Agent;
 use url::Url;
 
+pub use crate::credentials::Credentials;
+
 /// Get all calendars from the given CalDAV endpoint.
 pub fn get_calendars(
     agent: Agent,
-    username: &str,
-    password: &str,
+    credentials: &Credentials,
     base_url: &Url,
 ) -> Result<Vec<Calendar>, Error> {
-    let calendar_refs = caldav::get_calendars(agent, username, password, base_url)?;
+    let calendar_refs = caldav::get_calendars(agent, credentials, base_url)?;
     let mut calendars = Vec::new();
     for calendar_ref in calendar_refs {
         calendars.push(Calendar {
@@ -49,17 +50,10 @@ pub fn get_calendars(
 /// If anything besides parsing the todo data fails, an Err will be returned.
 pub fn get_todos(
     agent: Agent,
-    username: &str,
-    password: &str,
+    credentials: &Credentials,
     calendar: &Calendar,
 ) -> Result<(Vec<Event>, Vec<Error>), Error> {
-    let todo_refs = caldav::get_todos(
-        agent,
-        username,
-        password,
-        &calendar.base_url,
-        &calendar.inner,
-    )?;
+    let todo_refs = caldav::get_todos(agent, credentials, &calendar.base_url, &calendar.inner)?;
     let mut todos = Vec::new();
     let mut errors = Vec::new();
     for todo_ref in todo_refs {
@@ -84,17 +78,10 @@ pub fn get_todos(
 /// If anything besides parsing the event data fails, an Err will be returned.
 pub fn get_events(
     agent: Agent,
-    username: &str,
-    password: &str,
+    credentials: &Credentials,
     calendar: &Calendar,
 ) -> Result<(Vec<Event>, Vec<Error>), Error> {
-    let event_refs = caldav::get_events(
-        agent,
-        username,
-        password,
-        &calendar.base_url,
-        calendar.url(),
-    )?;
+    let event_refs = caldav::get_events(agent, credentials, &calendar.base_url, calendar.url())?;
     let mut events = Vec::new();
     let mut errors = Vec::new();
     for event_ref in event_refs {
@@ -126,8 +113,7 @@ pub fn parse_ical(raw: &str) -> Result<Ical, Error> {
 /// Save the given event on the CalDAV server.
 pub fn save_event(
     agent: Agent,
-    username: &str,
-    password: &str,
+    credentials: &Credentials,
     mut event: Event,
 ) -> Result<Event, Error> {
     for prop in &mut event.ical.properties {
@@ -143,7 +129,7 @@ pub fn save_event(
         etag: None,
         url: event.url,
     };
-    let event_ref = caldav::save_event(agent, username, password, event_ref)?;
+    let event_ref = caldav::save_event(agent, credentials, event_ref)?;
     Ok(Event {
         etag: event_ref.etag,
         url: event_ref.url,
@@ -152,18 +138,13 @@ pub fn save_event(
 }
 
 /// Remove the given event on the CalDAV server.
-pub fn remove_event(
-    agent: Agent,
-    username: &str,
-    password: &str,
-    event: Event,
-) -> Result<(), Error> {
+pub fn remove_event(agent: Agent, credentials: &Credentials, event: Event) -> Result<(), Error> {
     let event_ref = caldav::EventRef {
         data: event.ical.serialize(),
         etag: event.etag,
         url: event.url,
     };
-    caldav::remove_event(agent, username, password, event_ref)?;
+    caldav::remove_event(agent, credentials, event_ref)?;
     Ok(())
 }
 

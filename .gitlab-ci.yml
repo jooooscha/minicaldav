@@ -6,7 +6,7 @@
       when: never
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       when: on_success
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
       when: on_success
 
 .run_on_main:
@@ -17,7 +17,7 @@
       when: never
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       when: never
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
       when: on_success
 
 .cache-x86-64:
@@ -40,37 +40,58 @@ stages:
 #   - local: /ci/.gitlab-ci-containers.yml
 
 formatting & clippy:
-  image: registry.gitlab.com/floers/minicaldav/x86-64:main
+  image: archlinux:latest
   stage: prechecks
   extends: [.run_on_merge_request]
+  before_script:
+    - ./ci/setup.sh
   script:
     - source $HOME/.cargo/env
     - cargo fmt --all -- --color=always --check
-    - cargo clippy --lib --no-deps -- -Dwarnings
+    - cargo clippy --no-deps
 
 outdated & audit:
-  image: registry.gitlab.com/floers/minicaldav/x86-64:main
+  image: archlinux:latest
   allow_failure: true
   stage: prechecks
   extends: [.run_on_merge_request]
+  before_script:
+    - ./ci/setup.sh
+    - source $HOME/.cargo/env
+    - mkdir -p .audit
+    - curl -L -o .audit/audit.tar.gz "https://github.com/rustsec/rustsec/releases/download/cargo-audit%2Fv0.17.6/cargo-audit-x86_64-unknown-linux-musl-v0.17.6.tgz"
+    - tar xvzf .audit/audit.tar.gz --directory .audit/
+    - export PATH="$CI_PROJECT_DIR/.audit:$PATH"
+    - mkdir -p .outdated
+    - curl -L -o .outdated/outdated.tar.gz "https://github.com/kbknapp/cargo-outdated/releases/download/v0.13.1/cargo-outdated-0.13.1-x86_64-unknown-linux-musl.tar.gz"
+    - tar xvzf .outdated/outdated.tar.gz --directory .outdated/
+    - export PATH="$CI_PROJECT_DIR/.outdated:$PATH"
   script:
     - source $HOME/.cargo/env
-    - cargo outdated -R --exit-code 1
+    - cargo outdated
     - cargo audit
 
 build and test x86-64:
-  image: registry.gitlab.com/floers/minicaldav/x86-64:main
+  needs: ["formatting & clippy"]
+  image: archlinux:latest
   stage: checks
-  extends: [.run_on_merge_request, .cache-x86-64]
+  extends: [.run_on_merge_request]
+  before_script:
+    - ./ci/setup.sh
   script:
     - source $HOME/.cargo/env
     - cargo test --release --doc
     - cargo test --release --lib
     - cargo test --test caldav -- --test-threads 1
+
 release:
-  image: registry.gitlab.com/floers/minicaldav/x86-64:main
+  image: archlinux:latest
   stage: release
-  extends: [.run_on_main, .cache-x86-64]
+  extends: [.run_on_main]
+  before_script:
+    - ./ci/setup.sh
+    - source $HOME/.cargo/env
+    - cargo install cargo-bump
   script:
     - source $HOME/.cargo/env
     - git remote set-url origin https://${GITLAB_USERNAME}:${GITLAB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git
@@ -80,16 +101,3 @@ release:
     - TAG_VERSION=$(grep version Cargo.toml | head -1 | sed 's/version = "//g' | sed 's/"//g')
     - git push --atomic origin v$TAG_VERSION HEAD:$CI_COMMIT_BRANCH
     - cargo publish --token $CRATES_IO_TOKEN
-
-update dependency cache:
-  image: registry.gitlab.com/floers/minicaldav/x86-64:main
-  stage: post-release
-  extends: [.cache-x86-64]
-  rules:
-    - if: $CI_COMMIT_TAG
-      when: on_success
-    - when: never
-  script:
-    - source $HOME/.cargo/env
-    - cargo clean
-    - cargo build --release

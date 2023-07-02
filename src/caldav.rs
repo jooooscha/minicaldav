@@ -21,6 +21,8 @@ use serde::{Deserialize, Serialize};
 use ureq::Agent;
 use url::Url;
 
+use crate::credentials::Credentials;
+
 /// Send a PROPFIND to the given url using the given HTTP Basic authorization and search the result XML for a value.
 /// # Arguments
 /// - client: ureq Agent
@@ -32,17 +34,14 @@ use url::Url;
 /// - depth: Value for the Depth field
 pub fn propfind_get(
     client: Agent,
-    username: &str,
-    password: &str,
+    credentials: &Credentials,
     url: &Url,
     body: &str,
     prop_path: &[&str],
     depth: &str,
 ) -> Result<(String, xmltree::Element), Error> {
-    let auth = format!(
-        "Basic {}",
-        base64::encode(format!("{}:{}", username, password))
-    );
+    let auth = get_auth_header(credentials);
+
     let content = client
         .request("PROPFIND", url.as_str())
         .set("Authorization", &auth)
@@ -100,14 +99,12 @@ pub static USER_PRINCIPAL_REQUEST: &str = r#"
 /// Get the CalDAV principal URL for the given credentials from the caldav server.
 pub fn get_principal_url(
     client: Agent,
-    username: &str,
-    password: &str,
+    credentials: &Credentials,
     url: &Url,
 ) -> Result<Url, Error> {
     let principal_url = propfind_get(
         client,
-        username,
-        password,
+        credentials,
         url,
         USER_PRINCIPAL_REQUEST,
         &[
@@ -133,17 +130,12 @@ pub static HOMESET_REQUEST: &str = r#"
 "#;
 
 /// Get the homeset url for the given credentials from the caldav server.
-pub fn get_home_set_url(
-    client: Agent,
-    username: &str,
-    password: &str,
-    url: &Url,
-) -> Result<Url, Error> {
-    let principal_url = get_principal_url(client.clone(), username, password, url)?;
+pub fn get_home_set_url(client: Agent, credentials: &Credentials, url: &Url) -> Result<Url, Error> {
+    let principal_url =
+        get_principal_url(client.clone(), credentials, url).unwrap_or_else(|_| url.clone());
     let homeset_url = propfind_get(
         client,
-        username,
-        password,
+        credentials,
         &principal_url,
         HOMESET_REQUEST,
         &["response", "propstat", "prop", "calendar-home-set", "href"],
@@ -182,16 +174,14 @@ pub static CALENDARS_QUERY: &str = r#"
 /// Get calendars for the given credentials.
 pub fn get_calendars(
     client: Agent,
-    username: &str,
-    password: &str,
+    credentials: &Credentials,
     base_url: &Url,
 ) -> Result<Vec<CalendarRef>, Error> {
     let mut calendars = Vec::new();
-    let result = match get_home_set_url(client.clone(), username, password, base_url) {
+    let result = match get_home_set_url(client.clone(), credentials, base_url) {
         Ok(homeset_url) => propfind_get(
             client.clone(),
-            username,
-            password,
+            credentials,
             &homeset_url,
             CALENDARS_REQUEST,
             &[],
@@ -199,8 +189,7 @@ pub fn get_calendars(
         ),
         Err(_e) => propfind_get(
             client.clone(),
-            username,
-            password,
+            credentials,
             base_url,
             CALENDARS_REQUEST,
             &[],
@@ -209,16 +198,7 @@ pub fn get_calendars(
     };
 
     let root = if result.is_err() {
-        propfind_get(
-            client,
-            username,
-            password,
-            base_url,
-            CALENDARS_QUERY,
-            &[],
-            "1",
-        )?
-        .1
+        propfind_get(client, credentials, base_url, CALENDARS_QUERY, &[], "1")?.1
     } else {
         result?.1
     };
@@ -348,16 +328,11 @@ pub static CALENDAR_TODOS_REQUEST: &str = r#"
 /// Get ICAL formatted events from the CalDAV server.
 pub fn get_events(
     client: Agent,
-    username: &str,
-    password: &str,
+    credentials: &Credentials,
     base_url: &Url,
     calendar_url: &Url,
 ) -> Result<Vec<EventRef>, Error> {
-    let auth = format!(
-        "Basic {}",
-        base64::encode(format!("{}:{}", username, password))
-    );
-
+    let auth = get_auth_header(credentials);
     let content = client
         .request("REPORT", calendar_url.as_str())
         .set("Authorization", &auth)
@@ -410,18 +385,26 @@ pub fn get_events(
     Ok(events)
 }
 
+fn get_auth_header(credentials: &Credentials) -> String {
+    match credentials {
+        Credentials::Basic(username, password) => {
+            format!(
+                "Basic {}",
+                base64::encode(format!("{}:{}", username, password))
+            )
+        }
+        Credentials::Bearer(token) => format!("Bearer {}", token),
+    }
+}
+
 /// Get ICAL formatted todos from the CalDAV server.
 pub fn get_todos(
     client: Agent,
-    username: &str,
-    password: &str,
+    credentials: &Credentials,
     base_url: &Url,
     calendar_ref: &CalendarRef,
 ) -> Result<Vec<EventRef>, Error> {
-    let auth = format!(
-        "Basic {}",
-        base64::encode(format!("{}:{}", username, password))
-    );
+    let auth = get_auth_header(credentials);
 
     let content = client
         .request("REPORT", calendar_ref.url.as_str())
@@ -480,14 +463,10 @@ pub fn get_todos(
 /// Otherwise this is an update operation.
 pub fn save_event(
     client: Agent,
-    username: &str,
-    password: &str,
+    credentials: &Credentials,
     event_ref: EventRef,
 ) -> Result<EventRef, Error> {
-    let auth = format!(
-        "Basic {}",
-        base64::encode(format!("{}:{}", username, password))
-    );
+    let auth = get_auth_header(credentials);
 
     let response = client
         .put(event_ref.url.as_str())
@@ -512,14 +491,10 @@ pub fn save_event(
 /// Delete the given event from the CalDAV server.
 pub fn remove_event(
     client: Agent,
-    username: &str,
-    password: &str,
+    credentials: &Credentials,
     event_ref: EventRef,
 ) -> Result<(), Error> {
-    let auth = format!(
-        "Basic {}",
-        base64::encode(format!("{}:{}", username, password))
-    );
+    let auth = get_auth_header(credentials);
 
     let _response = client
         .delete(event_ref.url.as_str())

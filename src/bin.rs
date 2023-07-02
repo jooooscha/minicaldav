@@ -27,6 +27,9 @@ mod caldav;
 #[cfg(feature = "cli")]
 mod ical;
 
+#[cfg(feature = "cli")]
+mod credentials;
+
 #[cfg(not(feature = "cli"))]
 pub fn main() {}
 
@@ -34,6 +37,7 @@ pub fn main() {}
 pub fn main() {
     env_logger::init();
 
+    use api::Credentials;
     use ureq::Agent;
     use url::Url;
 
@@ -62,7 +66,7 @@ pub fn main() {
         } else {
             read("Enter email")
         };
-        println!("Enter password");
+        println!("Enter password or token (start with 'Bearer')");
         let password = rpassword::read_password().unwrap();
         println!("loading...");
         (url, email, password)
@@ -87,26 +91,41 @@ pub fn main() {
     match fun.as_str() {
         "get_calendars" => {
             let (url, user, pswd) = login();
+
+            let credentials = if pswd.starts_with("Bearer") {
+                Credentials::Bearer(pswd.replace("Bearer", ""))
+            } else {
+                Credentials::Basic(user, pswd)
+            };
             let calendars =
-                api::get_calendars(agent, &user, &pswd, &Url::parse(&url).unwrap()).unwrap();
+                api::get_calendars(agent, &credentials, &Url::parse(&url).unwrap()).unwrap();
             for calendar in calendars {
                 println!("{} {}", calendar.name(), calendar.url().as_str());
             }
         }
         "get_events" => {
             let (url, user, pswd) = login();
+
+            let credentials = if pswd.starts_with("Bearer") {
+                Credentials::Bearer(pswd.replace("Bearer", "").trim().to_string())
+            } else {
+                Credentials::Basic(user, pswd)
+            };
+
             let name = if args.len() >= 3 {
                 args.get(2).unwrap().clone()
             } else {
                 read("Calendar name:")
             };
             let calendars =
-                api::get_calendars(agent.clone(), &user, &pswd, &Url::parse(&url).unwrap())
+                api::get_calendars(agent.clone(), &credentials, &Url::parse(&url).unwrap())
                     .unwrap();
+
+            println!("search for calendar '{:?}'", name);
 
             for calendar in calendars {
                 if calendar.name() == &name {
-                    let events = api::get_events(agent.clone(), &user, &pswd, &calendar).unwrap();
+                    let events = api::get_events(agent.clone(), &credentials, &calendar).unwrap();
                     for event in events.0 {
                         for (k, v) in event.properties() {
                             println!("{}: {}", k, v);

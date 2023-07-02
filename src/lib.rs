@@ -32,10 +32,12 @@
 //! let url = url::Url::parse("http://mycaldav.com/").unwrap();
 //! let username = "foo";
 //! let password = "s3cret!";
-//! let calendars = minicaldav::get_calendars(agent.clone(), username, password, &url).unwrap();
+//! let credentials = minicaldav::Credentials::Basic(username.into(), password.into());
+//! let calendars = minicaldav::get_calendars(agent.clone(), &credentials, &url).unwrap();
 //! for calendar in calendars {
 //!     println!("{:?}", calendar);
-//!     let (events, errors) = minicaldav::get_events(agent.clone(), username, password, &calendar).unwrap();
+//!     let credentials = minicaldav::Credentials::Basic(username.into(), password.into());
+//!     let (events, errors) = minicaldav::get_events(agent.clone(), &credentials, &calendar).unwrap();
 //!     for event in events {
 //!         println!("{:?}", event);
 //!     }
@@ -58,3 +60,5 @@ pub use api::*;
 
 #[cfg(feature = "ical")]
 pub mod ical;
+
+mod credentials;
