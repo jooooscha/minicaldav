@@ -311,6 +311,24 @@ pub static CALENDAR_EVENTS_REQUEST: &str = r#"
     </c:calendar-query>
 "#;
 
+pub static CALENDAR_EXPANDED_REQUEST: &str = r#"
+    <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+        <d:prop>
+            <d:getetag />
+            <c:calendar-data>
+                <c:expand start="20250101T000000Z" end="20260101T000000Z"/>
+            </c:calendar-data>
+        </d:prop>
+        <c:filter>
+            <c:comp-filter name="VCALENDAR">
+                <c:comp-filter name="VEVENT">
+                    <c:time-range start="20250101T000000Z" end="20260101T000000Z"/>
+                </c:comp-filter>
+            </c:comp-filter>
+        </c:filter>
+    </c:calendar-query>
+"#;
+
 pub static CALENDAR_TODOS_REQUEST: &str = r#"
     <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
         <d:prop>
@@ -331,19 +349,34 @@ pub fn get_events(
     credentials: &Credentials,
     base_url: &Url,
     calendar_url: &Url,
+    range: Option<(String, String)>,
 ) -> Result<Vec<EventRef>, Error> {
     let auth = get_auth_header(credentials);
-    let content = client
-        .request("REPORT", calendar_url.as_str())
-        .set("Authorization", &auth)
-        .set("Depth", "1")
-        .set("Content-Type", "application/xml")
-        .send_bytes(CALENDAR_EVENTS_REQUEST.as_bytes())?
-        .into_string()
-        .map_err(|e| Error {
-            kind: ErrorKind::Parsing,
-            message: e.to_string(),
-        })?;
+    let content = if let Some((start, end)) = range {
+        client
+            .request("REPORT", calendar_url.as_str())
+            .set("Authorization", &auth)
+            .set("Depth", "1")
+            .set("Content-Type", "application/xml")
+            .send_bytes(CALENDAR_EXPANDED_REQUEST.as_bytes())?
+            .into_string()
+            .map_err(|e| Error {
+                kind: ErrorKind::Parsing,
+                message: e.to_string(),
+            })?
+    } else {
+        client
+            .request("REPORT", calendar_url.as_str())
+            .set("Authorization", &auth)
+            .set("Depth", "1")
+            .set("Content-Type", "application/xml")
+            .send_bytes(CALENDAR_EVENTS_REQUEST.as_bytes())?
+            .into_string()
+            .map_err(|e| Error {
+                kind: ErrorKind::Parsing,
+                message: e.to_string(),
+            })?
+    };
 
     trace!("Read CalDAV events: {:?}", content);
     let reader = content.as_bytes();
