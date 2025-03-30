@@ -301,7 +301,9 @@ pub static CALENDAR_EVENTS_REQUEST: &str = r#"
     <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
         <d:prop>
             <d:getetag />
-            <c:calendar-data />
+            <c:calendar-data>
+                <c:expand start="20000103T000000Z" end="21000105T000000Z"/>
+            </c:calendar-data>
         </d:prop>
         <c:filter>
             <c:comp-filter name="VCALENDAR">
@@ -310,24 +312,38 @@ pub static CALENDAR_EVENTS_REQUEST: &str = r#"
         </c:filter>
     </c:calendar-query>
 "#;
+                //<c:comp-filter name="VEVENT">
+                //    <c:time-range start="20250103T000000Z" end="20260105T000000Z"/>
+                //</c:comp-filter>
 
-pub static CALENDAR_EXPANDED_REQUEST: &str = r#"
+fn build_calendar_request_string(start: Option<String>, end: Option<String>) -> String {
+
+   let start = start.unwrap_or(String::from("20000103T000000Z"));
+   let end = end.unwrap_or(String::from("21000105T000000Z"));
+   let expand =
+           format!(r#"<c:calendar-data>
+               <c:expand start="{}" end="{}"/>
+           </c:calendar-data>"#, start, end);
+   let range =
+           format!(r#"<c:comp-filter name="VEVENT">
+                   <c:time-range start="{}" end="{}"/>
+               </c:comp-filter>"#, start, end);
+
+   format!(r#"
     <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
         <d:prop>
             <d:getetag />
-            <c:calendar-data>
-                <c:expand start="20250101T000000Z" end="20260101T000000Z"/>
-            </c:calendar-data>
+            {}
         </d:prop>
         <c:filter>
             <c:comp-filter name="VCALENDAR">
-                <c:comp-filter name="VEVENT">
-                    <c:time-range start="20250101T000000Z" end="20260101T000000Z"/>
-                </c:comp-filter>
+                {}
             </c:comp-filter>
         </c:filter>
     </c:calendar-query>
-"#;
+   "#, expand, range)
+}
+
 
 pub static CALENDAR_TODOS_REQUEST: &str = r#"
     <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
@@ -349,34 +365,39 @@ pub fn get_events(
     credentials: &Credentials,
     base_url: &Url,
     calendar_url: &Url,
-    range: Option<(String, String)>,
+    start: Option<String>,
+    end: Option<String>,
 ) -> Result<Vec<EventRef>, Error> {
     let auth = get_auth_header(credentials);
-    let content = if let Some((start, end)) = range {
-        client
-            .request("REPORT", calendar_url.as_str())
-            .set("Authorization", &auth)
-            .set("Depth", "1")
-            .set("Content-Type", "application/xml")
-            .send_bytes(CALENDAR_EXPANDED_REQUEST.as_bytes())?
-            .into_string()
-            .map_err(|e| Error {
-                kind: ErrorKind::Parsing,
-                message: e.to_string(),
-            })?
-    } else {
-        client
-            .request("REPORT", calendar_url.as_str())
-            .set("Authorization", &auth)
-            .set("Depth", "1")
-            .set("Content-Type", "application/xml")
-            .send_bytes(CALENDAR_EVENTS_REQUEST.as_bytes())?
-            .into_string()
-            .map_err(|e| Error {
-                kind: ErrorKind::Parsing,
-                message: e.to_string(),
-            })?
-    };
+    // let xml = CALENDAR_EVENTS_REQUEST; // build_calendar_request_string(start, end);
+    let xml = build_calendar_request_string(start, end);
+    println!("xml: {}", xml);
+
+    let content = client
+        .request("REPORT", calendar_url.as_str())
+        .set("Authorization", &auth)
+        .set("Depth", "1")
+        .set("Content-Type", "application/xml")
+        .send_bytes(xml.as_bytes())?
+        .into_string()
+        .map_err(|e| Error {
+            kind: ErrorKind::Parsing,
+            message: e.to_string(),
+        })?;
+
+    //} else {
+    //    client
+    //        .request("REPORT", calendar_url.as_str())
+    //        .set("Authorization", &auth)
+    //        .set("Depth", "1")
+    //        .set("Content-Type", "application/xml")
+    //        .send_bytes(CALENDAR_EVENTS_REQUEST.as_bytes())?
+    //        .into_string()
+    //        .map_err(|e| Error {
+    //            kind: ErrorKind::Parsing,
+    //            message: e.to_string(),
+    //        })?
+    //};
 
     trace!("Read CalDAV events: {:?}", content);
     let reader = content.as_bytes();

@@ -80,9 +80,10 @@ pub fn get_events(
     agent: Agent,
     credentials: &Credentials,
     calendar: &Calendar,
-    range: Option<(String, String)>,
+    start: Option<String>,
+    end: Option<String>,
 ) -> Result<(Vec<Event>, Vec<Error>), Error> {
-    let event_refs = caldav::get_events(agent, credentials, &calendar.base_url, calendar.url(), range)?;
+    let event_refs = caldav::get_events(agent, credentials, &calendar.base_url, calendar.url(), start, end)?;
     let mut events = Vec::new();
     let mut errors = Vec::new();
     for event_ref in event_refs {
