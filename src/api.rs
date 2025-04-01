@@ -82,8 +82,17 @@ pub fn get_events(
     calendar: &Calendar,
     start: Option<String>,
     end: Option<String>,
+    expanded: bool,
 ) -> Result<(Vec<Event>, Vec<Error>), Error> {
-    let event_refs = caldav::get_events(agent, credentials, &calendar.base_url, calendar.url(), start, end)?;
+    let event_refs = caldav::get_events(
+        agent,
+        credentials,
+        &calendar.base_url,
+        calendar.url(),
+        start,
+        end,
+        expanded
+    )?;
     let mut events = Vec::new();
     let mut errors = Vec::new();
     for event_ref in event_refs {
@@ -188,6 +197,10 @@ impl Event {
     /// The full url of this event.
     pub fn url(&self) -> &Url {
         &self.url
+    }
+
+    pub fn update_url(&mut self, url: Url) {
+        self.url = url;
     }
 
     fn get_property(&self, name: &str, datatype: &str) -> Option<Property> {

@@ -301,9 +301,7 @@ pub static CALENDAR_EVENTS_REQUEST: &str = r#"
     <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
         <d:prop>
             <d:getetag />
-            <c:calendar-data>
-                <c:expand start="20000103T000000Z" end="21000105T000000Z"/>
-            </c:calendar-data>
+            <c:calendar-data />
         </d:prop>
         <c:filter>
             <c:comp-filter name="VCALENDAR">
@@ -312,6 +310,9 @@ pub static CALENDAR_EVENTS_REQUEST: &str = r#"
         </c:filter>
     </c:calendar-query>
 "#;
+            // <c:calendar-data>
+            //     <c:expand start="20000103T000000Z" end="21000105T000000Z"/>
+            // </c:calendar-data>
                 //<c:comp-filter name="VEVENT">
                 //    <c:time-range start="20250103T000000Z" end="20260105T000000Z"/>
                 //</c:comp-filter>
@@ -367,11 +368,14 @@ pub fn get_events(
     calendar_url: &Url,
     start: Option<String>,
     end: Option<String>,
+    expanded: bool
 ) -> Result<Vec<EventRef>, Error> {
     let auth = get_auth_header(credentials);
-    // let xml = CALENDAR_EVENTS_REQUEST; // build_calendar_request_string(start, end);
-    let xml = build_calendar_request_string(start, end);
-    println!("xml: {}", xml);
+    let xml = if expanded {
+        &build_calendar_request_string(start, end)
+    } else {
+        CALENDAR_EVENTS_REQUEST // build_calendar_request_string(start, end);
+    };
 
     let content = client
         .request("REPORT", calendar_url.as_str())
