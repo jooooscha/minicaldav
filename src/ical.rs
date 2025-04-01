@@ -111,7 +111,7 @@ impl Ical {
         if ical.is_some() {
             Err(Error::new(format!(
                 "Missing END:{}",
-                ical.map(|i| i.name).unwrap_or_else(|| "".to_string())
+                ical.map(|i| i.name).unwrap_or_default()
             )))
         } else {
             Err(Error::new("Invalid input".into()))
