@@ -16,6 +16,8 @@
 
 //! CalDAV client implementation using ureq.
 
+use std::time::Instant;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use ureq::Agent;
@@ -85,6 +87,31 @@ pub fn propfind_get(
                 .unwrap_or_else(|| "".to_string()),
             root,
         ))
+    }
+}
+
+/// Simple connection check to the DAV server
+pub fn check_connetion(
+    client: Agent,
+    credentials: &Credentials,
+    url: &Url,
+) -> Result<(), Error> {
+    let auth = get_auth_header(credentials);
+
+    let now = Instant::now();
+
+    let response = client.get(url.as_str())
+        .set("Authorization", &auth)
+        .call();
+
+    println!("elapsed_time: {:?}", now.elapsed());
+
+    match response {
+        Ok(_) => Ok(()),
+        Err(e) => Err(Error {
+            kind: ErrorKind::Http,
+            message: e.to_string(),
+        }),
     }
 }
 

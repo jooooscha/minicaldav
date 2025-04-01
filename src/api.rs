@@ -28,6 +28,18 @@ use url::Url;
 
 pub use crate::credentials::Credentials;
 
+/// Simple connection check to the DAV server
+pub fn check_connection(
+    agent: Agent,
+    credentials: &Credentials,
+    base_url: &Url,
+) -> Result<(), Error> {
+    caldav::check_connetion(agent, credentials, base_url)?;
+
+    Ok(())
+}
+
+
 /// Get all calendars from the given CalDAV endpoint.
 pub fn get_calendars(
     agent: Agent,
