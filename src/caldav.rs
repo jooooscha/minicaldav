@@ -88,6 +88,43 @@ pub fn propfind_get(
     }
 }
 
+/// Discover the content url of the DAV server
+pub fn discover_url(
+    client: Agent,
+    credentials: &Credentials,
+    base_url: &Url,
+) -> Result<Url, Error> {
+    let auth = get_auth_header(credentials);
+
+    // let url = if base_url.starts_with("http://") {
+    //     format!("https://{}/.well-known/caldav", dav_url.strip_prefix("http://").unwrap())
+    // } else if dav_url.starts_with("https://") {
+    //     format!("{}/.well-known/caldav", dav_url)
+    // } else {
+    //     format!("https://{}/.well-known/caldav", dav_url)
+    // };
+
+    let base_url = base_url.join("/.well-known/caldav")?;
+    println!("base_url: {:?}", base_url);
+
+    let response = client.get(base_url.as_str())
+        .set("Authorization", &auth)
+        .call();
+
+    match response {
+        Ok(resp) => {
+            let response_url = resp.get_url();
+            println!("response_url: {:?}", response_url);
+            let url = Url::parse(response_url)?;
+            Ok(url)
+        },
+        Err(e) => Err(Error {
+            kind: ErrorKind::Http,
+            message: e.to_string(),
+        }),
+    }
+}
+
 /// Simple connection check to the DAV server
 pub fn check_connetion(
     client: Agent,
@@ -470,6 +507,7 @@ fn get_auth_header(credentials: &Credentials) -> String {
             format!(
                 "Basic {}",
                 base64::encode(format!("{}:{}", username, password))
+                // username, password
             )
         }
         Credentials::Bearer(token) => format!("Bearer {}", token),

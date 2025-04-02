@@ -39,6 +39,16 @@ pub fn check_connection(
     Ok(())
 }
 
+pub fn discover_url(
+    agent: Agent,
+    credentials: &Credentials,
+    base_url: &Url,
+) -> Result<Url, Error> {
+    Ok(caldav::discover_url(agent, credentials, base_url)?)
+}
+
+
+
 
 /// Get all calendars from the given CalDAV endpoint.
 pub fn get_calendars(
