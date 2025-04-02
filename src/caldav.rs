@@ -96,14 +96,6 @@ pub fn discover_url(
 ) -> Result<Url, Error> {
     let auth = get_auth_header(credentials);
 
-    // let url = if base_url.starts_with("http://") {
-    //     format!("https://{}/.well-known/caldav", dav_url.strip_prefix("http://").unwrap())
-    // } else if dav_url.starts_with("https://") {
-    //     format!("{}/.well-known/caldav", dav_url)
-    // } else {
-    //     format!("https://{}/.well-known/caldav", dav_url)
-    // };
-
     let base_url = base_url.join("/.well-known/caldav")?;
     println!("base_url: {:?}", base_url);
 
