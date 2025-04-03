@@ -118,11 +118,13 @@ pub fn discover_url(
 }
 
 /// Simple connection check to the DAV server
+/// Returns the final url.
+/// This can be used for content url bootstrapping
 pub fn check_connetion(
     client: Agent,
     credentials: &Credentials,
     url: &Url,
-) -> Result<(), Error> {
+) -> Result<Url, Error> {
     let auth = get_auth_header(credentials);
 
     let response = client.get(url.as_str())
@@ -130,7 +132,12 @@ pub fn check_connetion(
         .call();
 
     match response {
-        Ok(_) => Ok(()),
+        Ok(resp) => {
+            let response_url = resp.get_url();
+            println!("response_url: {:?}", response_url);
+            let url = Url::parse(response_url)?;
+            Ok(url)
+        },
         Err(e) => Err(Error {
             kind: ErrorKind::Http,
             message: e.to_string(),
@@ -438,20 +445,6 @@ pub fn get_events(
             kind: ErrorKind::Parsing,
             message: e.to_string(),
         })?;
-
-    //} else {
-    //    client
-    //        .request("REPORT", calendar_url.as_str())
-    //        .set("Authorization", &auth)
-    //        .set("Depth", "1")
-    //        .set("Content-Type", "application/xml")
-    //        .send_bytes(CALENDAR_EVENTS_REQUEST.as_bytes())?
-    //        .into_string()
-    //        .map_err(|e| Error {
-    //            kind: ErrorKind::Parsing,
-    //            message: e.to_string(),
-    //        })?
-    //};
 
     trace!("Read CalDAV events: {:?}", content);
     let reader = content.as_bytes();
