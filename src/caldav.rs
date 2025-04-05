@@ -128,8 +128,10 @@ pub async fn check_connetion(
     let response = response.send()
         .await?;
 
-    let url = response.url().clone();
-    Ok(url)
+    match response.error_for_status() {
+        Ok(resp) => Ok(resp.url().clone()),
+        Err(err) => Err(Error { kind: ErrorKind::Http, message: err.to_string() }),
+    }
 }
 
 pub static USER_PRINCIPAL_REQUEST: &str = r#"
