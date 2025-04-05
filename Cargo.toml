@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "minicaldav"
-version = "0.9.1"
+version = "0.10.0"
 authors = ["Florian Loers", "Joscha Loos"]
 description = "Minimal caldav client"
 readme = "README.md"
@@ -19,16 +19,13 @@ path = "src/bin.rs"
 
 [features]
 default = ["ical", "caldav"]
-caldav = ["dep:ureq", "dep:base64", "url", "dep:xmltree", "dep:log"]
+caldav = [ "dep:base64", "url", "dep:xmltree", "dep:log"]
 cli = ["ical", "caldav", "dep:rpassword", "dep:env_logger"]
 ical = ["dep:log"]
 serde = ["dep:serde", "dep:serde_json", "url/serde"]
 
 [dependencies]
 log = { version = "0.4", optional = true }
-
-# caldav
-ureq = { version = "2", features = ["charset", "tls"], optional = true }
 xmltree = { version = "0.10.3", optional = true }
 url = { version = "2", optional = true }
 base64 = { version = "0.13", optional = true }
@@ -40,6 +37,7 @@ rpassword = { version = "7", optional = true }
 # serde
 serde = { version = "1", features = ["derive"], optional = true }
 serde_json = { version = "1", optional = true }
+reqwest = "0.12.15"
 
 [dev-dependencies]
 tiny_http = { version = "0.11", features = ["ssl"] }
