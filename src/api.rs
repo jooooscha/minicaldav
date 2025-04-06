@@ -301,6 +301,17 @@ impl Event {
         }
     }
 
+    pub fn remove_property_attribute(&mut self, name: &str, attr_name: &str) {
+        if let Some(p) = self
+            .ical
+            .get_mut("VEVENT")
+            .and_then(|e| e.properties.iter_mut().find(|p| p.name == name))
+        {
+            p.attributes.remove(attr_name);
+        }
+    }
+
+
     /// Get all properties of this event.
     fn get_properties(&self, datatype: &str) -> Vec<(&String, &String)> {
         self.ical
