@@ -277,6 +277,16 @@ impl Event {
         })
     }
 
+    /// Get the value of the given property name or `None`.
+    pub fn get_all(&self, name: &str) -> Option<Vec<&String>> {
+        self.ical.get("VEVENT").map(|ical| {
+            ical.properties
+                .iter()
+                .filter_map(|p| if p.name == name { Some(&p.value) } else { None })
+                .collect::<Vec<&String>>()
+        })
+    }
+
     /// Set the value of the given property name or create a new property.
     pub fn set(&mut self, name: &str, value: &str) {
         match self
