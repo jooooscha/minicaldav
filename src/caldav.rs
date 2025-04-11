@@ -379,7 +379,7 @@ fn build_calendar_request_string(start: Option<&str>, end: Option<&str>) -> Stri
    let end = end.unwrap_or("21000105T000000Z");
    let expand =
            format!(r#"<c:calendar-data>
-               <c:expand start="{}" end="{}"/>
+              <c:limit-recurrance-set start="{}" end="{}"/>
            </c:calendar-data>"#, start, end);
    let range =
            format!(r#"<c:comp-filter name="VEVENT">
