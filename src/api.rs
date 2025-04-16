@@ -95,8 +95,8 @@ pub async fn get_events(
     agent: &Client,
     credentials: &Credentials,
     calendar: &Calendar,
-    start: Option<&str>,
-    end: Option<&str>,
+    start: Option<String>,
+    end: Option<String>,
     expanded: bool,
 ) -> Result<(Vec<Event>, Vec<Error>), Error> {
     let event_refs = caldav::get_events(
@@ -390,6 +390,19 @@ impl Property {
             attributes: Default::default(),
         }
     }
+
+    pub fn new_with_attributes(name: &str, value: &str, attribs: Vec<(&str, &str)>) -> Self {
+        let mut attributes = HashMap::new();
+        for (k, v) in attribs {
+            attributes.insert(k.into(), v.into());
+        }
+        Self {
+            name: name.into(),
+            value: value.into(),
+            attributes,
+        }
+    }
+
     pub fn name(&self) -> &String {
         &self.name
     }

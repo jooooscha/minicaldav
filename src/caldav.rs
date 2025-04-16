@@ -373,14 +373,21 @@ pub static CALENDAR_EVENTS_REQUEST: &str = r#"
                 //    <c:time-range start="20250103T000000Z" end="20260105T000000Z"/>
                 //</c:comp-filter>
 
-fn build_calendar_request_string(start: Option<&str>, end: Option<&str>) -> String {
+fn build_calendar_request_string(start: Option<String>, end: Option<String>, expanded: bool) -> String {
 
-   let start = start.unwrap_or("20000103T000000Z");
-   let end = end.unwrap_or("21000105T000000Z");
-   let expand =
-           format!(r#"<c:calendar-data>
-              <c:limit-recurrance-set start="{}" end="{}"/>
-           </c:calendar-data>"#, start, end);
+   let start = start.as_deref().unwrap_or("20000103T000000Z");
+   let end = end.as_deref().unwrap_or("21000105T000000Z");
+
+   let req = if expanded {
+       format!(r#"<c:calendar-data>
+          <c:expand start="{}" end="{}"/>
+       </c:calendar-data>"#, start, end)
+   } else {
+       format!(r#"<c:calendar-data>
+          <c:limit-recurrance-set start="{}" end="{}"/>
+       </c:calendar-data>"#, start, end)
+   };
+
    let range =
            format!(r#"<c:comp-filter name="VEVENT">
                    <c:time-range start="{}" end="{}"/>
@@ -398,7 +405,7 @@ fn build_calendar_request_string(start: Option<&str>, end: Option<&str>) -> Stri
             </c:comp-filter>
         </c:filter>
     </c:calendar-query>
-   "#, expand, range)
+   "#, req, range)
 }
 
 
@@ -422,15 +429,15 @@ pub async fn get_events(
     credentials: &Credentials,
     base_url: Url,
     calendar_url: Url,
-    start: Option<&str>,
-    end: Option<&str>,
+    start: Option<String>,
+    end: Option<String>,
     expanded: bool
 ) -> Result<Vec<EventRef>, Error> {
 
     let auth = get_auth_header(credentials);
 
     let xml = if expanded {
-        &build_calendar_request_string(start, end)
+        &build_calendar_request_string(start, end, expanded)
     } else {
         CALENDAR_EVENTS_REQUEST // build_calendar_request_string(start, end);
     };
