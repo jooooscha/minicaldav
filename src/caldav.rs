@@ -24,6 +24,9 @@ use crate::credentials::Credentials;
 
 use reqwest::{header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH, CONTENT_TYPE, USER_AGENT}, Client, Method};
 
+use crate::xml_templates::build_create_calendar_xml;
+
+
 /// Send a PROPFIND to the given url using the given HTTP Basic authorization and search the result XML for a value.
 /// # Arguments
 /// - client: ureq Agent
@@ -36,7 +39,7 @@ use reqwest::{header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH, CONTENT_TYPE, USER
 pub async fn propfind_get(
     client: &Client,
     credentials: &Credentials,
-    url: Url,
+    url: &Url,
     body: String,
     prop_path: &[&str],
     depth: &str,
@@ -46,7 +49,7 @@ pub async fn propfind_get(
     let propfind = Method::from_bytes(b"PROPFIND").unwrap();
 
     let content = client
-        .request(propfind, url)
+        .request(propfind, url.as_str())
         .header(USER_AGENT, "rust-minicaldav")
         .header(CONTENT_TYPE, "application/xml; charset=utf-8")
         .header(ACCEPT, "text/xml, text/calendar")
@@ -151,7 +154,7 @@ pub async fn get_principal_url(
     let principal_url = propfind_get(
         client,
         credentials,
-        url.clone(),
+        &url,
         USER_PRINCIPAL_REQUEST.to_string(),
         &[
             "response",
@@ -184,7 +187,7 @@ pub async fn get_home_set_url(
     let homeset_url = propfind_get(
         client,
         credentials,
-        url.clone(),
+        &url,
         HOMESET_REQUEST.to_string(),
         &["response", "propstat", "prop", "calendar-home-set", "href"],
         "0",
@@ -239,7 +242,7 @@ pub async fn get_calendars(
     let prop = propfind_get(
         client,
         credentials,
-        homeset_url,
+        &homeset_url,
         CALENDARS_REQUEST.to_string(),
         &[],
         "1",
@@ -251,7 +254,7 @@ pub async fn get_calendars(
             propfind_get(
                 client,
                 credentials,
-                base_url.clone(),
+                &base_url,
                 CALENDARS_QUERY.to_string(),
                 &[],
                 "1"
@@ -619,6 +622,45 @@ pub async fn remove_event(
         .delete(event_ref.url.as_str())
         .header(USER_AGENT, "rust-minicaldav")
         .header(AUTHORIZATION, &auth)
+        .send()
+        .await?;
+
+    Ok(())
+}
+
+
+/// Send a MKCOL request to create a new calendar collection
+pub async fn create_calendar(
+    client: &Client,
+    credentials: &Credentials,
+    base_url: &Url,
+    calid: String,
+    name: String,
+    color: String
+) -> Result<(), Error> {
+    let auth = get_auth_header(credentials);
+
+    let principal_url = get_principal_url(client, credentials, base_url.clone())
+        .await
+        .unwrap_or_else(|_| base_url.clone());
+
+    let homeset_url = get_home_set_url(client, credentials, principal_url)
+        .await
+        .unwrap_or_else(|_| base_url.clone());
+
+    let new_cal_url = homeset_url.join(&calid)?;
+
+    let mkcol = Method::from_bytes(b"MKCOL").unwrap();
+
+    let body = build_create_calendar_xml(name, color);
+
+    let response = client
+        .request(mkcol, new_cal_url)
+        .header(USER_AGENT, "rust-minicaldav")
+        .header(CONTENT_TYPE, "application/xml; charset=utf-8")
+        .header(ACCEPT, "text/xml, text/calendar")
+        .header(AUTHORIZATION, auth)
+        .body(body)
         .send()
         .await?;
 

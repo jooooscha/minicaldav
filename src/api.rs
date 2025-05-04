@@ -174,6 +174,19 @@ pub async fn remove_event(client: &Client, credentials: &Credentials, event: Eve
     Ok(())
 }
 
+pub async fn create_calendar(
+    client: &Client,
+    credentials: &Credentials,
+    base_url: &Url,
+    calid: String,
+    name: String,
+    color: String,
+) -> Result<(), Error> {
+    let result = caldav::create_calendar(client, credentials, base_url, calid, name, color).await;
+    Ok(())
+}
+
+
 /// A remote CalDAV calendar.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]

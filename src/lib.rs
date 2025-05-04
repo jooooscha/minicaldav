@@ -58,7 +58,11 @@ pub mod caldav;
 #[cfg(feature = "caldav")]
 pub use api::*;
 
+#[cfg(feature = "caldav")]
+mod xml_templates;
+
 #[cfg(feature = "ical")]
 pub mod ical;
+
 
 mod credentials;
