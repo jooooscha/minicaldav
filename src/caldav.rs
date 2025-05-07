@@ -667,6 +667,35 @@ pub async fn create_calendar(
     Ok(())
 }
 
+pub async fn remove_calendar(
+    client: &Client,
+    credentials: &Credentials,
+    base_url: &Url,
+    calid: String,
+) -> Result<(), Error> {
+    let auth = get_auth_header(credentials);
+
+    let principal_url = get_principal_url(client, credentials, base_url.clone())
+        .await
+        .unwrap_or_else(|_| base_url.clone());
+
+    let homeset_url = get_home_set_url(client, credentials, principal_url)
+        .await
+        .unwrap_or_else(|_| base_url.clone());
+
+    let cal_url = homeset_url.join(&calid)?;
+
+    let response = client
+        .delete(cal_url)
+        .header(USER_AGENT, "rust-minicaldav")
+        .header(CONTENT_TYPE, "application/xml; charset=utf-8")
+        .header(AUTHORIZATION, auth)
+        .send()
+        .await?;
+
+    Ok(())
+}
+
 /// Errors that may occur during CalDAV operations.
 #[derive(Debug)]
 pub struct Error {

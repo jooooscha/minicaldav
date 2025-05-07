@@ -182,7 +182,17 @@ pub async fn create_calendar(
     name: String,
     color: String,
 ) -> Result<(), Error> {
-    let result = caldav::create_calendar(client, credentials, base_url, calid, name, color).await;
+    caldav::create_calendar(client, credentials, base_url, calid, name, color).await?;
+    Ok(())
+}
+
+pub async fn remove_calendar(
+    client: &Client,
+    credentials: &Credentials,
+    base_url: &Url,
+    calid: String,
+) -> Result<(), Error> {
+    caldav::remove_calendar(client, credentials, base_url, calid).await?;
     Ok(())
 }
 
