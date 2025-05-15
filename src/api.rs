@@ -215,6 +215,9 @@ impl Calendar {
     pub fn color(&self) -> Option<&String> {
         self.inner.color.as_ref()
     }
+    pub fn writable(&self) -> Option<bool> {
+        self.inner.privilege.as_ref().and_then( |p| Some(p == "write"))
+    }
 }
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

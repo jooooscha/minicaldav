@@ -202,6 +202,7 @@ pub static CALENDARS_REQUEST: &str = r#"
     <d:prop>
         <d:displayname />
         <d:resourcetype />
+        <d:current-user-privilege-set/>
         <calendar-color xmlns="http://apple.com/ns/ical/" />
         <c:supported-calendar-component-set />
     </d:prop>
@@ -213,6 +214,7 @@ pub static CALENDARS_QUERY: &str = r#"
     <d:prop>
         <d:getetag />
         <d:displayname />
+        <d:current-user-privilege-set/>
         <calendar-color xmlns="http://apple.com/ns/ical/" />
         <d:resourcetype />
         <c:supported-calendar-component-set />
@@ -274,6 +276,16 @@ pub async fn get_calendars(
                 .and_then(|e| e.get_child("prop"))
                 .and_then(|e| e.get_child("calendar-color"))
                 .and_then(|e| e.get_text());
+            let privilege = response
+                .get_child("propstat")
+                .and_then(|e| e.get_child("prop"))
+                .and_then(|e| e.get_child("current-user-privilege-set"))
+                .and_then(|e| e.get_child("privilege"));
+
+            let privilege = privilege
+                .and_then(|p| p.children[0].as_element()
+                    .and_then(|element| Some(element.name.clone())));
+
             let is_calendar = response
                 .get_child("propstat")
                 .and_then(|e| e.get_child("prop"))
@@ -310,6 +322,7 @@ pub async fn get_calendars(
                         url,
                         name: name.to_string(),
                         color: color.map(|c| c.into()),
+                        privilege,
                     })
                 } else {
                     error!("Could not parse url: {}/{}", base_url, href);
@@ -328,6 +341,7 @@ pub struct CalendarRef {
     pub url: Url,
     pub name: String,
     pub color: Option<String>,
+    pub privilege: Option<String>,
 }
 
 impl std::fmt::Debug for CalendarRef {
