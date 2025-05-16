@@ -603,7 +603,6 @@ pub async fn save_event(
 
     let EventRef { data, url, .. } = event_ref.clone();
 
-    println!("data: {}", data);
     let content_length = data.len();
 
     let response = client.put(url)
@@ -614,7 +613,6 @@ pub async fn save_event(
         .body(data)
         .send()
         .await?;
-    println!("response: {:?}", response);
 
     let etag = response.headers().get("ETag")
         .map(|etag| etag.to_str().unwrap().to_string());
