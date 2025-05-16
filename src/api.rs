@@ -222,6 +222,7 @@ impl Calendar {
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 /// An event in a CalDAV calendar.
+/// Corresponds to exactly one `.ics` file
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Event {
     etag: Option<String>,
@@ -277,6 +278,10 @@ impl Event {
 
     pub fn ical(&self) -> &Ical {
         &self.ical
+    }
+
+    pub fn ical_mut(&mut self) -> &mut Ical {
+        &mut self.ical
     }
 
     pub fn add(&mut self, property: Property) {
@@ -397,6 +402,30 @@ impl Event {
 
     pub fn set_etag(&mut self, etag: Option<String>) {
         self.etag = etag
+    }
+
+    pub fn add_component(&mut self, ical: Ical) {
+        self.ical_mut().add_component(ical);
+    }
+
+    pub fn get_first_component(&mut self) -> Option<&mut Ical> {
+        self.ical.children.first_mut()
+    }
+
+    pub fn get_component_by_recurid(&mut self, recurid: &str) -> Option<&mut Ical> {
+
+        // search for the first component with name RECURRENCE-ID
+        // where the value matches `recurid`
+        // In other words, return the component with matching RECURRENCE-ID
+        // if it exists
+        self.ical.children
+            .iter_mut()
+            .find(|comp|
+                comp.get_first_property("RECURRENCE-ID")
+                    .map(|p| p.value == recurid)
+                    .unwrap_or(false)
+            )
+
     }
 }
 

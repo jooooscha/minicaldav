@@ -41,10 +41,55 @@ impl Ical {
     pub fn get(&self, child_name: &str) -> Option<&Ical> {
         self.children.iter().find(|&c| c.name == child_name)
     }
+
+    pub fn add_property(&mut self, property: Property) {
+        self.properties.push(property);
+    }
+
     /// Get the child container which has the given name.
     pub fn get_mut(&mut self, child_name: &str) -> Option<&mut Ical> {
         self.children.iter_mut().find(|c| c.name == child_name)
     }
+
+    pub fn add_component(&mut self, ical: Self) {
+        self.children.push(ical);
+    }
+
+    pub fn pop_child_property(&mut self, name: &str) -> Option<Property> {
+        self.get_mut("VEVENT").and_then(|ical| {
+            let index = ical.properties.iter().enumerate().find_map(|(i, p)| {
+                if p.name == name {
+                    Some(i)
+                } else {
+                    None
+                }
+            });
+
+            if let Some(index) = index {
+                Some(Property::from(ical.properties.remove(index)))
+            } else {
+                None
+            }
+        })
+    }
+
+    pub fn get_first_property(&self, name: &str) -> Option<&Property>{
+        self.properties.iter().find(|p| p.name == name)
+    }
+
+    pub fn remove_first_property(&mut self, name: &str) {
+        self.properties.iter().position(|p| p.name == name)
+            .map(|index| self.properties.remove(index));
+    }
+
+    /// adds the Property to the ICAL event, replacing any existing properties with matching name
+    pub fn replace_first_property(&mut self, name: &str, value: &str, attributes: Vec<(&str, &str)>) {
+        let _ = self.remove_first_property(name);
+
+        let prop = Property::new_with_attributes(name, value, attributes);
+        self.add_property(prop);
+    }
+
     /// Parse the given lines to an ICAL container.
     pub fn parse(lines: &LineIterator) -> Result<Self, Error> {
         let mut ical: Option<Ical> = None;
