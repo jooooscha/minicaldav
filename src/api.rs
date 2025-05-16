@@ -408,7 +408,7 @@ impl Event {
         self.ical_mut().add_component(ical);
     }
 
-    pub fn get_first_component(&mut self) -> Option<&mut Ical> {
+    pub fn get_first_component_mut(&mut self) -> Option<&mut Ical> {
         self.ical.children.first_mut()
     }
 
