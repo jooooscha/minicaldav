@@ -19,6 +19,7 @@
 use std::collections::HashMap;
 
 use crate::caldav;
+use crate::errors::{MiniCaldavError, MiniCaldavError::*};
 use crate::ical;
 use crate::ical::Ical;
 use reqwest::Client;
@@ -33,7 +34,7 @@ pub async fn check_connection(
     client: &Client,
     credentials: &Credentials,
     base_url: &Url,
-) -> Result<Url, Error> {
+) -> Result<Url, MiniCaldavError> {
     Ok(caldav::check_connetion(client, credentials, base_url).await?)
 }
 
@@ -43,7 +44,7 @@ pub async fn get_calendars(
     client: &Client,
     credentials: &Credentials,
     base_url: Url,
-) -> Result<Vec<Calendar>, Error> {
+) -> Result<Vec<Calendar>, MiniCaldavError> {
     let calendar_refs = caldav::get_calendars(client, credentials, base_url.clone()).await?;
     let mut calendars = Vec::new();
     for calendar_ref in calendar_refs {
@@ -62,7 +63,7 @@ pub async fn get_todos(
     client: &Client,
     credentials: &Credentials,
     calendar: &Calendar,
-) -> Result<(Vec<Event>, Vec<Error>), Error> {
+) -> Result<(Vec<Event>, Vec<MiniCaldavError>), MiniCaldavError> {
     let todo_refs = caldav::get_todos(
         client,
         credentials,
@@ -73,16 +74,14 @@ pub async fn get_todos(
     let mut errors = Vec::new();
     for todo_ref in todo_refs {
         let lines = ical::LineIterator::new(&todo_ref.data);
+
         match ical::Ical::parse(&lines) {
             Ok(ical) => todos.push(Event {
                 url: todo_ref.url.clone(),
                 etag: todo_ref.etag.clone(),
                 ical,
             }),
-            Err(e) => errors.push(Error::Ical(format!(
-                "Could not parse todo {}: {:?}",
-                todo_ref.data, e
-            ))),
+            Err(e) => errors.push(CouldNotParseTodo(todo_ref.data, format!("{:?}", e))),
         }
     }
     Ok((todos, errors))
@@ -98,7 +97,7 @@ pub async fn get_events(
     start: Option<String>,
     end: Option<String>,
     expanded: bool,
-) -> Result<(Vec<Event>, Vec<Error>), Error> {
+) -> Result<(Vec<Event>, Vec<MiniCaldavError>), MiniCaldavError> {
     let event_refs = caldav::get_events(
         agent,
         credentials,
@@ -118,30 +117,27 @@ pub async fn get_events(
                 etag: event_ref.etag.clone(),
                 ical,
             }),
-            Err(e) => errors.push(Error::Ical(format!(
-                "Could not parse event {}: {:?}",
-                event_ref.data, e
-            ))),
+            Err(e) => errors.push(CouldNotParseEvent(event_ref.data, format!("{:?}", e))),
         }
     }
     Ok((events, errors))
 }
 
 /// Parses the given string into the Ical struct.
-pub fn parse_ical(raw: &str) -> Result<Ical, Error> {
-    let lines = ical::LineIterator::new(raw);
-    match ical::Ical::parse(&lines) {
-        Ok(ical) => Ok(ical),
-        Err(e) => Err(Error::Ical(format!("Could not parse event: {:?}", e))),
-    }
-}
+// pub fn parse_ical(raw: &str) -> Result<Ical, MiniCaldavError> {
+//     let lines = ical::LineIterator::new(raw);
+//     match ical::Ical::parse(&lines) {
+//         Ok(ical) => Ok(ical),
+//         Err(e) => Err(CouldNotParseIcal(format!("{:?}", e))),
+//     }
+// }
 
 /// Save the given event on the CalDAV server.
 pub async fn save_event(
     client: &Client,
     credentials: &Credentials,
     mut event: Event,
-) -> Result<Event, Error> {
+) -> Result<Event, MiniCaldavError> {
     for prop in &mut event.ical.properties {
         if prop.name == "SEQUENCE" {
             if let Ok(num) = prop.value.parse::<i64>() {
@@ -164,7 +160,7 @@ pub async fn save_event(
 }
 
 /// Remove the given event on the CalDAV server.
-pub async fn remove_event(client: &Client, credentials: &Credentials, event: Event) -> Result<(), Error> {
+pub async fn remove_event(client: &Client, credentials: &Credentials, event: Event) -> Result<(), MiniCaldavError> {
     let event_ref = caldav::EventRef {
         data: event.ical.serialize(),
         etag: event.etag,
@@ -181,7 +177,7 @@ pub async fn create_calendar(
     calid: String,
     name: String,
     color: String,
-) -> Result<(), Error> {
+) -> Result<(), MiniCaldavError> {
     caldav::create_calendar(client, credentials, base_url, calid, name, color).await?;
     Ok(())
 }
@@ -191,7 +187,7 @@ pub async fn remove_calendar(
     credentials: &Credentials,
     base_url: &Url,
     calid: String,
-) -> Result<(), Error> {
+) -> Result<(), MiniCaldavError> {
     caldav::remove_calendar(client, credentials, base_url, calid).await?;
     Ok(())
 }
@@ -495,35 +491,6 @@ impl From<Property> for ical::Property {
     }
 }
 
-/// Errors that may occur during minicalav operations.
-#[derive(Debug)]
-pub enum Error {
-    Ical(String),
-    Caldav(String),
-}
-
-impl std::error::Error for Error {}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::Ical(msg) => write!(f, "CalDAV Error: '{}'", msg),
-            Error::Caldav(msg) => write!(f, "ICAL Error: '{}'", msg),
-        }
-    }
-}
-
-impl From<caldav::Error> for Error {
-    fn from(e: caldav::Error) -> Self {
-        Error::Ical(e.message)
-    }
-}
-
-impl From<ical::Error> for Error {
-    fn from(e: ical::Error) -> Self {
-        Error::Caldav(e.message)
-    }
-}
 
 #[derive(Debug)]
 pub struct EventBuilder {

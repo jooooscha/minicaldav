@@ -26,6 +26,8 @@ use reqwest::{header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH, CONTENT_TYPE, USER
 
 use crate::xml_templates::build_create_calendar_xml;
 
+use crate::errors::MiniCaldavError::{self, *};
+
 
 /// Send a PROPFIND to the given url using the given HTTP Basic authorization and search the result XML for a value.
 /// # Arguments
@@ -43,7 +45,7 @@ pub async fn propfind_get(
     body: String,
     prop_path: &[&str],
     depth: &str,
-) -> Result<(String, xmltree::Element), Error> {
+) -> Result<(String, xmltree::Element), MiniCaldavError> {
     let auth = get_auth_header(credentials);
 
     let propfind = Method::from_bytes(b"PROPFIND").unwrap();
@@ -80,10 +82,7 @@ pub async fn propfind_get(
     }
 
     if searched != prop_path.len() {
-        Err(Error {
-            kind: ErrorKind::Parsing,
-            message: format!("Could not find data {:?} in PROPFIND response.", prop_path),
-        })
+        Err(PathNotExists(format!("{:?}", prop_path)))
     } else {
         Ok((
             element
@@ -100,7 +99,7 @@ pub async fn discover_url(
     client: &Client,
     credentials: &Credentials,
     base_url: Url,
-) -> Result<Url, Error> {
+) -> Result<Url, MiniCaldavError> {
     let auth = get_auth_header(credentials);
 
     let base_url = base_url.join("/.well-known/caldav")?;
@@ -121,20 +120,19 @@ pub async fn check_connetion(
     client: &Client,
     credentials: &Credentials,
     url: &Url,
-) -> Result<Url, Error> {
+) -> Result<Url, MiniCaldavError> {
     let auth = get_auth_header(credentials);
 
     let response = client.get(url.as_str())
         .header(USER_AGENT, "rust-minicaldav")
-        .header(AUTHORIZATION, auth.clone());
-
-    let response = response.send()
+        .header(AUTHORIZATION, auth.clone())
+        .send()
         .await?;
 
-    match response.error_for_status() {
-        Ok(resp) => Ok(resp.url().clone()),
-        Err(err) => Err(Error { kind: ErrorKind::Http, message: err.to_string() }),
-    }
+    let response_url = response.error_for_status()?
+        .url().clone();
+
+    Ok(response_url)
 }
 
 pub static USER_PRINCIPAL_REQUEST: &str = r#"
@@ -150,7 +148,7 @@ pub async fn get_principal_url(
     client: &Client,
     credentials: &Credentials,
     url: Url,
-) -> Result<Url, Error> {
+) -> Result<Url, MiniCaldavError> {
     let principal_url = propfind_get(
         client,
         credentials,
@@ -182,7 +180,7 @@ pub async fn get_home_set_url(
     client: &Client,
     credentials: &Credentials,
     url: Url
-) -> Result<Url, Error> {
+) -> Result<Url, MiniCaldavError> {
 
     let homeset_url = propfind_get(
         client,
@@ -230,7 +228,7 @@ pub async fn get_calendars(
     client: &Client,
     credentials: &Credentials,
     base_url: Url,
-) -> Result<Vec<CalendarRef>, Error> {
+) -> Result<Vec<CalendarRef>, MiniCaldavError> {
     let mut calendars = Vec::new();
 
     let principal_url = get_principal_url(client, credentials, base_url.clone())
@@ -449,7 +447,7 @@ pub async fn get_events(
     start: Option<String>,
     end: Option<String>,
     expanded: bool
-) -> Result<Vec<EventRef>, Error> {
+) -> Result<Vec<EventRef>, MiniCaldavError> {
 
     let auth = get_auth_header(credentials);
 
@@ -534,7 +532,7 @@ pub async fn get_todos(
     credentials: &Credentials,
     base_url: &Url,
     calendar_ref: &CalendarRef,
-) -> Result<Vec<EventRef>, Error> {
+) -> Result<Vec<EventRef>, MiniCaldavError> {
     let auth = get_auth_header(credentials);
 
     let report = Method::from_bytes(b"REPORT").unwrap();
@@ -598,7 +596,7 @@ pub async fn save_event(
     client: &Client,
     credentials: &Credentials,
     event_ref: EventRef,
-) -> Result<EventRef, Error> {
+) -> Result<EventRef, MiniCaldavError> {
     let auth = get_auth_header(credentials);
 
     let EventRef { data, url, .. } = event_ref.clone();
@@ -630,15 +628,17 @@ pub async fn remove_event(
     client: &Client,
     credentials: &Credentials,
     event_ref: EventRef,
-) -> Result<(), Error> {
+) -> Result<(), MiniCaldavError> {
     let auth = get_auth_header(credentials);
 
-    let _response = client
+    let response = client
         .delete(event_ref.url.as_str())
         .header(USER_AGENT, "rust-minicaldav")
         .header(AUTHORIZATION, &auth)
         .send()
         .await?;
+
+    response.error_for_status()?;
 
     Ok(())
 }
@@ -652,7 +652,7 @@ pub async fn create_calendar(
     calid: String,
     name: String,
     color: String
-) -> Result<(), Error> {
+) -> Result<(), MiniCaldavError> {
     let auth = get_auth_header(credentials);
 
     let principal_url = get_principal_url(client, credentials, base_url.clone())
@@ -679,6 +679,9 @@ pub async fn create_calendar(
         .send()
         .await?;
 
+
+    response.error_for_status()?;
+
     Ok(())
 }
 
@@ -687,7 +690,7 @@ pub async fn remove_calendar(
     credentials: &Credentials,
     base_url: &Url,
     calid: String,
-) -> Result<(), Error> {
+) -> Result<(), MiniCaldavError> {
     let auth = get_auth_header(credentials);
 
     let principal_url = get_principal_url(client, credentials, base_url.clone())
@@ -708,45 +711,7 @@ pub async fn remove_calendar(
         .send()
         .await?;
 
+    response.error_for_status()?;
+
     Ok(())
-}
-
-/// Errors that may occur during CalDAV operations.
-#[derive(Debug)]
-pub struct Error {
-    pub kind: ErrorKind,
-    pub message: String,
-}
-
-#[derive(Debug)]
-pub enum ErrorKind {
-    Http,
-    Parsing,
-}
-
-impl From<reqwest::Error> for Error {
-    fn from(e: reqwest::Error) -> Self {
-        Self {
-            kind: ErrorKind::Http,
-            message: format!("{:?}", e),
-        }
-    }
-}
-
-impl From<xmltree::ParseError> for Error {
-    fn from(e: xmltree::ParseError) -> Self {
-        Self {
-            kind: ErrorKind::Parsing,
-            message: e.to_string(),
-        }
-    }
-}
-
-impl From<url::ParseError> for Error {
-    fn from(e: url::ParseError) -> Self {
-        Self {
-            kind: ErrorKind::Parsing,
-            message: e.to_string(),
-        }
-    }
 }

@@ -51,6 +51,8 @@
 #[macro_use]
 extern crate log;
 
+pub mod errors;
+
 #[cfg(feature = "caldav")]
 mod api;
 #[cfg(feature = "caldav")]
