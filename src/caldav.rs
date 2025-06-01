@@ -282,7 +282,7 @@ pub async fn get_calendars(
 
             let privilege = privilege
                 .and_then(|p| p.children[0].as_element()
-                    .and_then(|element| Some(element.name.clone())));
+                    .map(|element| element.name.clone()));
 
             let is_calendar = response
                 .get_child("propstat")

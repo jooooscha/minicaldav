@@ -35,7 +35,7 @@ pub async fn check_connection(
     credentials: &Credentials,
     base_url: &Url,
 ) -> Result<Url, MiniCaldavError> {
-    Ok(caldav::check_connetion(client, credentials, base_url).await?)
+    caldav::check_connetion(client, credentials, base_url).await
 }
 
 
@@ -123,15 +123,6 @@ pub async fn get_events(
     Ok((events, errors))
 }
 
-/// Parses the given string into the Ical struct.
-// pub fn parse_ical(raw: &str) -> Result<Ical, MiniCaldavError> {
-//     let lines = ical::LineIterator::new(raw);
-//     match ical::Ical::parse(&lines) {
-//         Ok(ical) => Ok(ical),
-//         Err(e) => Err(CouldNotParseIcal(format!("{:?}", e))),
-//     }
-// }
-
 /// Save the given event on the CalDAV server.
 pub async fn save_event(
     client: &Client,
@@ -212,7 +203,7 @@ impl Calendar {
         self.inner.color.as_ref()
     }
     pub fn writable(&self) -> Option<bool> {
-        self.inner.privilege.as_ref().and_then( |p| Some(p == "write"))
+        self.inner.privilege.as_ref().map(|p| p == "write")
     }
 }
 

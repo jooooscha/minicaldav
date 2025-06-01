@@ -66,7 +66,7 @@ impl Ical {
             });
 
             if let Some(index) = index {
-                Some(Property::from(ical.properties.remove(index)))
+                Some(ical.properties.remove(index))
             } else {
                 None
             }
@@ -84,7 +84,7 @@ impl Ical {
 
     /// adds the Property to the ICAL event, replacing any existing properties with matching name
     pub fn replace_first_property(&mut self, name: &str, value: &str, attributes: Vec<(&str, &str)>) {
-        let _ = self.remove_first_property(name);
+        self.remove_first_property(name);
 
         let prop = Property::new_with_attributes(name, value, attributes);
         self.add_property(prop);
