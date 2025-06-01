@@ -66,5 +66,4 @@ mod xml_templates;
 #[cfg(feature = "ical")]
 pub mod ical;
 
-
 mod credentials;

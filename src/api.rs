@@ -38,7 +38,6 @@ pub async fn check_connection(
     caldav::check_connetion(client, credentials, base_url).await
 }
 
-
 /// Get all calendars from the given CalDAV endpoint.
 pub async fn get_calendars(
     client: &Client,
@@ -64,12 +63,8 @@ pub async fn get_todos(
     credentials: &Credentials,
     calendar: &Calendar,
 ) -> Result<(Vec<Event>, Vec<MiniCaldavError>), MiniCaldavError> {
-    let todo_refs = caldav::get_todos(
-        client,
-        credentials,
-        &calendar.base_url,
-        &calendar.inner
-    ).await?;
+    let todo_refs =
+        caldav::get_todos(client, credentials, &calendar.base_url, &calendar.inner).await?;
     let mut todos = Vec::new();
     let mut errors = Vec::new();
     for todo_ref in todo_refs {
@@ -105,8 +100,9 @@ pub async fn get_events(
         calendar.url().clone(),
         start,
         end,
-        expanded
-    ).await?;
+        expanded,
+    )
+    .await?;
     let mut events = Vec::new();
     let mut errors = Vec::new();
     for event_ref in event_refs {
@@ -151,7 +147,11 @@ pub async fn save_event(
 }
 
 /// Remove the given event on the CalDAV server.
-pub async fn remove_event(client: &Client, credentials: &Credentials, event: Event) -> Result<(), MiniCaldavError> {
+pub async fn remove_event(
+    client: &Client,
+    credentials: &Credentials,
+    event: Event,
+) -> Result<(), MiniCaldavError> {
     let event_ref = caldav::EventRef {
         data: event.ical.serialize(),
         etag: event.etag,
@@ -182,7 +182,6 @@ pub async fn remove_calendar(
     caldav::remove_calendar(client, credentials, base_url, calid).await?;
     Ok(())
 }
-
 
 /// A remote CalDAV calendar.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -339,7 +338,6 @@ impl Event {
         }
     }
 
-
     /// Get all properties of this event.
     fn get_properties(&self, datatype: &str) -> Vec<(&String, &String)> {
         self.ical
@@ -400,19 +398,15 @@ impl Event {
     }
 
     pub fn get_component_by_recurid(&mut self, recurid: &str) -> Option<&mut Ical> {
-
         // search for the first component with name RECURRENCE-ID
         // where the value matches `recurid`
         // In other words, return the component with matching RECURRENCE-ID
         // if it exists
-        self.ical.children
-            .iter_mut()
-            .find(|comp|
-                comp.get_first_property("RECURRENCE-ID")
-                    .map(|p| p.value == recurid)
-                    .unwrap_or(false)
-            )
-
+        self.ical.children.iter_mut().find(|comp| {
+            comp.get_first_property("RECURRENCE-ID")
+                .map(|p| p.value == recurid)
+                .unwrap_or(false)
+        })
     }
 }
 
@@ -481,7 +475,6 @@ impl From<Property> for ical::Property {
         }
     }
 }
-
 
 #[derive(Debug)]
 pub struct EventBuilder {

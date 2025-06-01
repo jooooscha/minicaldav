@@ -1,8 +1,6 @@
-pub fn build_create_calendar_xml(
-    name: String,
-    color: String
-) -> String {
-    format!(r#"
+pub fn build_create_calendar_xml(name: String, color: String) -> String {
+    format!(
+        r#"
     <x0:mkcol xmlns:x0="DAV:">
 	<x0:set>
 		<x0:prop>
@@ -48,5 +46,6 @@ END:VCALENDAR
 			</x0:prop>
 		</x0:set>
 	</x0:mkcol>
-        "#)
+        "#
+    )
 }

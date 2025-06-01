@@ -73,17 +73,24 @@ impl Ical {
         })
     }
 
-    pub fn get_first_property(&self, name: &str) -> Option<&Property>{
+    pub fn get_first_property(&self, name: &str) -> Option<&Property> {
         self.properties.iter().find(|p| p.name == name)
     }
 
     pub fn remove_first_property(&mut self, name: &str) {
-        self.properties.iter().position(|p| p.name == name)
+        self.properties
+            .iter()
+            .position(|p| p.name == name)
             .map(|index| self.properties.remove(index));
     }
 
     /// adds the Property to the ICAL event, replacing any existing properties with matching name
-    pub fn replace_first_property(&mut self, name: &str, value: &str, attributes: Vec<(&str, &str)>) {
+    pub fn replace_first_property(
+        &mut self,
+        name: &str,
+        value: &str,
+        attributes: Vec<(&str, &str)>,
+    ) {
         self.remove_first_property(name);
 
         let prop = Property::new_with_attributes(name, value, attributes);
