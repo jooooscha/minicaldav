@@ -201,8 +201,9 @@ impl Calendar {
     pub fn color(&self) -> Option<&String> {
         self.inner.color.as_ref()
     }
-    pub fn writable(&self) -> Option<bool> {
-        self.inner.privilege.as_ref().map(|p| p == "write")
+    pub fn writable(&self) -> bool {
+        println!("self.inner.privilege: {:?}", self.inner.privileges);
+        self.inner.privileges.iter().any(|p| p == "write")
     }
 }
 

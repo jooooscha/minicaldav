@@ -131,6 +131,8 @@ pub async fn check_connetion(
         .send()
         .await?;
 
+
+    println!("{:#?}", response);
     let response_url = response.error_for_status()?.url().clone();
 
     Ok(response_url)
@@ -280,17 +282,26 @@ pub async fn get_calendars(
                 .and_then(|e| e.get_child("prop"))
                 .and_then(|e| e.get_child("calendar-color"))
                 .and_then(|e| e.get_text());
-            let privilege = response
+            let privileges: Vec<String> = response
                 .get_child("propstat")
                 .and_then(|e| e.get_child("prop"))
                 .and_then(|e| e.get_child("current-user-privilege-set"))
-                .and_then(|e| e.get_child("privilege"));
+                .map(|e| {
+                    let mut list = Vec::new();
+                    for privs in &e.children {
+                        if let Some(p) = privs.as_element() {
+                            for c in &p.children {
+                                if let Some(c) = c.as_element() {
+                                    list.push(c.name.clone());
+                                }
+                            }
+                        }
+                    }
+                    list
+                })
+                .unwrap_or_else(Vec::new);
 
-            let privilege = privilege.and_then(|p| {
-                p.children[0]
-                    .as_element()
-                    .map(|element| element.name.clone())
-            });
+            println!("{:#?}", privileges);
 
             let is_calendar = response
                 .get_child("propstat")
@@ -328,7 +339,7 @@ pub async fn get_calendars(
                         url,
                         name: name.to_string(),
                         color: color.map(|c| c.into()),
-                        privilege,
+                        privileges,
                     })
                 } else {
                     error!("Could not parse url: {}/{}", base_url, href);
@@ -347,7 +358,7 @@ pub struct CalendarRef {
     pub url: Url,
     pub name: String,
     pub color: Option<String>,
-    pub privilege: Option<String>,
+    pub privileges: Vec<String>,
 }
 
 impl std::fmt::Debug for CalendarRef {
