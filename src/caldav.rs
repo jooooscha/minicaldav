@@ -309,6 +309,13 @@ pub async fn get_calendars(
                 .and_then(|e| e.get_child("resourcetype"))
                 .map(|e| e.get_child("calendar").is_some())
                 .unwrap_or(false);
+
+            let is_subscription = response
+                .get_child("propstat")
+                .and_then(|e| e.get_child("prop"))
+                .and_then(|e| e.get_child("resourcetype"))
+                .map(|e| e.get_child("subscribed").is_some())
+                .unwrap_or(false);
             let supports_vevents = response
                 .get_child("propstat")
                 .and_then(|e| e.get_child("prop"))
@@ -330,7 +337,7 @@ pub async fn get_calendars(
                 .unwrap_or(false);
             let href = response.get_child("href").and_then(|e| e.get_text());
 
-            if !is_calendar || !supports_vevents {
+            if !(is_calendar || is_subscription) || !supports_vevents {
                 continue;
             }
             if let Some((href, name)) = href.and_then(|href| name.map(|name| (href, name))) {
@@ -339,6 +346,7 @@ pub async fn get_calendars(
                         url,
                         name: name.to_string(),
                         color: color.map(|c| c.into()),
+                        is_subscription,
                         privileges,
                     })
                 } else {
@@ -359,6 +367,7 @@ pub struct CalendarRef {
     pub name: String,
     pub color: Option<String>,
     pub privileges: Vec<String>,
+    pub is_subscription: bool,
 }
 
 impl std::fmt::Debug for CalendarRef {
@@ -540,6 +549,30 @@ pub async fn get_events(
     Ok(events)
 }
 
+pub async fn get_ical_events(
+    client: &Client,
+    credentials: &Credentials,
+    calendar_url: Url,
+) -> Result<Vec<EventRef>, MiniCaldavError> {
+    let auth = get_auth_header(credentials);
+
+    let response = client
+        .get(calendar_url.clone())
+        .header(USER_AGENT, "rust-minicaldav")
+        .header(AUTHORIZATION, auth)
+        .header(CONTENT_TYPE, "application/xml; charset=utf-8")
+        .header(ACCEPT, "text/xml, text/calendar")
+        .header("Depth", "1")
+        .send().await?.text().await?;
+
+    // println!("response: {:?}", response);
+    let events = vec![EventRef {
+        url: calendar_url,
+        data: response.to_string(),
+        etag: None,
+    }];
+    Ok(events)
+}
 fn get_auth_header(credentials: &Credentials) -> String {
     match credentials {
         Credentials::Basic(username, password) => {

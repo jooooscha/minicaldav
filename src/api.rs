@@ -93,16 +93,28 @@ pub async fn get_events(
     end: Option<String>,
     expanded: bool,
 ) -> Result<(Vec<Event>, Vec<MiniCaldavError>), MiniCaldavError> {
-    let event_refs = caldav::get_events(
-        agent,
-        credentials,
-        calendar.base_url.clone(),
-        calendar.url().clone(),
-        start,
-        end,
-        expanded,
-    )
-    .await?;
+
+
+    let event_refs = if calendar.is_subscription() {
+        let export_url = Url::parse(&format!("{}?export", calendar.url())).unwrap();
+        caldav::get_ical_events(
+            agent,
+            credentials,
+            export_url
+        )
+        .await?
+    } else {
+        caldav::get_events(
+            agent,
+            credentials,
+            calendar.base_url.clone(),
+            calendar.url().clone(),
+            start,
+            end,
+            expanded,
+        )
+        .await?
+    };
     let mut events = Vec::new();
     let mut errors = Vec::new();
     for event_ref in event_refs {
@@ -204,6 +216,9 @@ impl Calendar {
     pub fn writable(&self) -> bool {
         println!("self.inner.privilege: {:?}", self.inner.privileges);
         self.inner.privileges.iter().any(|p| p == "write")
+    }
+    pub fn is_subscription(&self) -> bool {
+        self.inner.is_subscription
     }
 }
 
