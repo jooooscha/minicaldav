@@ -16,11 +16,10 @@
 
 //! CalDAV client implementation using ureq.
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 use url::Url;
+use log::*;
 
-use crate::credentials::Credentials;
+use crate::{calendar::CalendarRef, vcalendar_props::{VCalendarProps, ComponentResponse}, credentials::Credentials};
 
 use reqwest::{
     header::{ACCEPT, AUTHORIZATION, CONTENT_LENGTH, CONTENT_TYPE, USER_AGENT},
@@ -30,6 +29,7 @@ use reqwest::{
 use crate::xml_templates::build_create_calendar_xml;
 
 use crate::errors::MiniCaldavError::{self, *};
+use crate::xml_templates::*;
 
 /// Send a PROPFIND to the given url using the given HTTP Basic authorization and search the result XML for a value.
 /// # Arguments
@@ -48,7 +48,7 @@ pub async fn propfind_get(
     prop_path: &[&str],
     depth: &str,
 ) -> Result<(String, xmltree::Element), MiniCaldavError> {
-    let auth = get_auth_header(credentials);
+    let auth = credentials.as_header();
 
     let propfind = Method::from_bytes(b"PROPFIND").unwrap();
 
@@ -100,7 +100,7 @@ pub async fn discover_url(
     credentials: &Credentials,
     base_url: Url,
 ) -> Result<Url, MiniCaldavError> {
-    let auth = get_auth_header(credentials);
+    let auth = credentials.as_header();
 
     let base_url = base_url.join("/.well-known/caldav")?;
     println!("base_url: {:?}", base_url);
@@ -122,7 +122,7 @@ pub async fn check_connetion(
     credentials: &Credentials,
     url: &Url,
 ) -> Result<Url, MiniCaldavError> {
-    let auth = get_auth_header(credentials);
+    let auth = credentials.as_header();
 
     let response = client
         .get(url.as_str())
@@ -137,14 +137,6 @@ pub async fn check_connetion(
 
     Ok(response_url)
 }
-
-pub static USER_PRINCIPAL_REQUEST: &str = r#"
-    <d:propfind xmlns:d="DAV:">
-       <d:prop>
-           <d:current-user-principal />
-       </d:prop>
-    </d:propfind>
-"#;
 
 /// Get the CalDAV principal URL for the given credentials from the caldav server.
 pub async fn get_principal_url(
@@ -171,15 +163,6 @@ pub async fn get_principal_url(
     Ok(url.join(&principal_url)?)
 }
 
-pub static HOMESET_REQUEST: &str = r#"
-    <d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav" >
-      <d:self/>
-      <d:prop>
-        <c:calendar-home-set />
-      </d:prop>
-    </d:propfind>
-"#;
-
 /// Get the homeset url for the given credentials from the caldav server.
 pub async fn get_home_set_url(
     client: &Client,
@@ -200,33 +183,6 @@ pub async fn get_home_set_url(
     Ok(url.join(&homeset_url)?)
 }
 
-pub static CALENDARS_REQUEST: &str = r#"
-<d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav" >
-    <d:prop>
-        <d:displayname />
-        <d:resourcetype />
-        <d:current-user-privilege-set/>
-        <calendar-color xmlns="http://apple.com/ns/ical/" />
-        <c:supported-calendar-component-set />
-    </d:prop>
-</d:propfind>
-"#;
-
-pub static CALENDARS_QUERY: &str = r#"
-<c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
-    <d:prop>
-        <d:getetag />
-        <d:displayname />
-        <d:current-user-privilege-set/>
-        <calendar-color xmlns="http://apple.com/ns/ical/" />
-        <d:resourcetype />
-        <c:supported-calendar-component-set />
-    </d:prop>
-    <c:filter>
-        <c:comp-filter name="VCALENDAR" />
-    </c:filter>
-</c:calendar-query>
-"#;
 
 /// Get calendars for the given credentials.
 pub async fn get_calendars(
@@ -301,8 +257,6 @@ pub async fn get_calendars(
                 })
                 .unwrap_or_else(Vec::new);
 
-            println!("{:#?}", privileges);
-
             let is_calendar = response
                 .get_child("propstat")
                 .and_then(|e| e.get_child("prop"))
@@ -360,127 +314,9 @@ pub async fn get_calendars(
     Ok(calendars)
 }
 
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Clone)]
-pub struct CalendarRef {
-    pub url: Url,
-    pub name: String,
-    pub color: Option<String>,
-    pub privileges: Vec<String>,
-    pub is_subscription: bool,
-}
-
-impl std::fmt::Debug for CalendarRef {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CalendarRef")
-            .field("url", &self.url.to_string())
-            .field("name", &self.name)
-            .finish()
-    }
-}
-
-#[derive(Clone)]
-pub struct EventRef {
-    pub etag: Option<String>,
-    pub url: Url,
-    pub data: String,
-}
-
-impl std::fmt::Debug for EventRef {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("EventRef")
-            .field("etag", &self.etag)
-            .field("url", &self.url.to_string())
-            .field("data", &self.data)
-            .finish()
-    }
-}
-
-pub static CALENDAR_EVENTS_REQUEST: &str = r#"
-    <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
-        <d:prop>
-            <d:getetag />
-            <c:calendar-data />
-        </d:prop>
-        <c:filter>
-            <c:comp-filter name="VCALENDAR">
-                <c:comp-filter name="VEVENT" />
-            </c:comp-filter>
-        </c:filter>
-    </c:calendar-query>
-"#;
-// <c:calendar-data>
-//     <c:expand start="20000103T000000Z" end="21000105T000000Z"/>
-// </c:calendar-data>
-//<c:comp-filter name="VEVENT">
-//    <c:time-range start="20250103T000000Z" end="20260105T000000Z"/>
-//</c:comp-filter>
-
-fn build_calendar_request_string(
-    start: Option<String>,
-    end: Option<String>,
-    expanded: bool,
-) -> String {
-    let start = start.as_deref().unwrap_or("20000103T000000Z");
-    let end = end.as_deref().unwrap_or("21000105T000000Z");
-
-    let req = if expanded {
-        format!(
-            r#"<c:calendar-data>
-          <c:expand start="{}" end="{}"/>
-       </c:calendar-data>"#,
-            start, end
-        )
-    } else {
-        format!(
-            r#"<c:calendar-data>
-          <c:limit-recurrance-set start="{}" end="{}"/>
-       </c:calendar-data>"#,
-            start, end
-        )
-    };
-
-    let range = format!(
-        r#"<c:comp-filter name="VEVENT">
-                   <c:time-range start="{}" end="{}"/>
-               </c:comp-filter>"#,
-        start, end
-    );
-
-    format!(
-        r#"
-    <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
-        <d:prop>
-            <d:getetag />
-            {}
-        </d:prop>
-        <c:filter>
-            <c:comp-filter name="VCALENDAR">
-                {}
-            </c:comp-filter>
-        </c:filter>
-    </c:calendar-query>
-   "#,
-        req, range
-    )
-}
-
-pub static CALENDAR_TODOS_REQUEST: &str = r#"
-    <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
-        <d:prop>
-            <d:getetag />
-            <c:calendar-data />
-        </d:prop>
-        <c:filter>
-            <c:comp-filter name="VCALENDAR">
-                <c:comp-filter name="VTODO" />
-            </c:comp-filter>
-        </c:filter>
-    </c:calendar-query>
-"#;
 
 /// Get ICAL formatted events from the CalDAV server.
-pub async fn get_events(
+pub async fn get_components(
     client: &Client,
     credentials: &Credentials,
     base_url: Url,
@@ -488,8 +324,7 @@ pub async fn get_events(
     start: Option<String>,
     end: Option<String>,
     expanded: bool,
-) -> Result<Vec<EventRef>, MiniCaldavError> {
-    let auth = get_auth_header(credentials);
+) -> Result<Vec<ComponentResponse>, MiniCaldavError> {
 
     let xml = if expanded {
         &build_calendar_request_string(start, end, expanded)
@@ -500,7 +335,7 @@ pub async fn get_events(
     let request = client
         .request(Method::from_bytes(b"REPORT").unwrap(), calendar_url)
         .header(USER_AGENT, "rust-minicaldav")
-        .header(AUTHORIZATION, auth)
+        .header(AUTHORIZATION, credentials.as_header())
         .header(CONTENT_TYPE, "application/xml; charset=utf-8")
         .header(ACCEPT, "text/xml, text/calendar")
         .header("Depth", "1")
@@ -508,7 +343,6 @@ pub async fn get_events(
 
     let content = request.send().await?.text().await?;
 
-    trace!("Read CalDAV events: {:?}", content);
     // println!("content: {}", content);
     let reader = content.as_bytes();
 
@@ -534,11 +368,7 @@ pub async fn get_events(
 
             if let Some((href, data)) = href.and_then(|href| data.map(|data| (href, data))) {
                 if let Ok(url) = base_url.join(&href) {
-                    events.push(EventRef {
-                        url,
-                        data: data.to_string(),
-                        etag,
-                    })
+                    events.push(ComponentResponse::new(url, etag, data.to_string()));
                 } else {
                     error!("Could not parse url {}/{}", base_url, href)
                 }
@@ -546,6 +376,7 @@ pub async fn get_events(
         }
     }
 
+    trace!("GET events response: {:#?}", events);
     Ok(events)
 }
 
@@ -553,8 +384,8 @@ pub async fn get_ical_events(
     client: &Client,
     credentials: &Credentials,
     calendar_url: Url,
-) -> Result<Vec<EventRef>, MiniCaldavError> {
-    let auth = get_auth_header(credentials);
+) -> Result<ComponentResponse, MiniCaldavError> {
+    let auth = credentials.as_header();
 
     let response = client
         .get(calendar_url.clone())
@@ -565,100 +396,27 @@ pub async fn get_ical_events(
         .header("Depth", "1")
         .send().await?.text().await?;
 
-    // println!("response: {:?}", response);
-    let events = vec![EventRef {
-        url: calendar_url,
-        data: response.to_string(),
-        etag: None,
-    }];
-    Ok(events)
-}
-fn get_auth_header(credentials: &Credentials) -> String {
-    match credentials {
-        Credentials::Basic(username, password) => {
-            format!(
-                "Basic {}",
-                base64::encode(format!("{}:{}", username, password)) // username, password
-            )
-        }
-        Credentials::Bearer(token) => format!("Bearer {}", token),
-    }
-}
-
-/// Get ICAL formatted todos from the CalDAV server.
-pub async fn get_todos(
-    client: &Client,
-    credentials: &Credentials,
-    base_url: &Url,
-    calendar_ref: &CalendarRef,
-) -> Result<Vec<EventRef>, MiniCaldavError> {
-    let auth = get_auth_header(credentials);
-
-    let report = Method::from_bytes(b"REPORT").unwrap();
-
-    let content = client
-        .request(report, calendar_ref.url.as_str())
-        .header(USER_AGENT, "rust-minicaldav")
-        .header(AUTHORIZATION, &auth)
-        .header("Depth", "1")
-        .header(CONTENT_TYPE, "application/xml; chatset=utf-8")
-        .body(CALENDAR_TODOS_REQUEST.as_bytes())
-        .send()
-        .await?
-        .text()
-        .await?;
-
-    trace!("Read CalDAV events: {:?}", content);
-    let reader = content.as_bytes();
-
-    let root = xmltree::Element::parse(reader)?;
-    let mut todos = Vec::new();
-    for c in &root.children {
-        if let Some(child) = c.as_element() {
-            let href = child.get_child("href").and_then(|e| e.get_text());
-            let etag = child
-                .get_child("propstat")
-                .and_then(|e| e.get_child("prop"))
-                .and_then(|e| e.get_child("getetag"))
-                .and_then(|e| e.get_text())
-                .map(|e| e.to_string());
-            let data = child
-                .get_child("propstat")
-                .and_then(|e| e.get_child("prop"))
-                .and_then(|e| e.get_child("calendar-data"))
-                .and_then(|e| e.get_text());
-            if href.is_none() || etag.is_none() || data.is_none() {
-                continue;
-            }
-
-            if let Some((href, data)) = href.and_then(|href| data.map(|data| (href, data))) {
-                if let Ok(url) = base_url.join(&href) {
-                    todos.push(EventRef {
-                        url,
-                        data: data.to_string(),
-                        etag,
-                    })
-                } else {
-                    error!("Could not parse url {}/{}", base_url, href)
-                }
-            }
-        }
-    }
-
-    Ok(todos)
+    let event = ComponentResponse::new(calendar_url, None, response);
+    Ok(event)
 }
 
 /// Save the given event on the CalDAV server.
 /// If no event for the events url exist it will create a new event.
 /// Otherwise this is an update operation.
-pub async fn save_event(
+pub async fn save_component(
     client: &Client,
     credentials: &Credentials,
-    event_ref: EventRef,
-) -> Result<EventRef, MiniCaldavError> {
-    let auth = get_auth_header(credentials);
+    vcalendar_props: VCalendarProps,
+) -> Result<VCalendarProps, MiniCaldavError> {
 
-    let EventRef { data, url, .. } = event_ref.clone();
+    let url = vcalendar_props.url().clone();
+
+    let calendar = vcalendar_props.inner().clone();
+
+    trace!("Saving component: {:#?}", calendar);
+
+    // let data = component.inner().try_into_string()?;
+    let data = calendar.to_string();
 
     let content_length = data.len();
 
@@ -667,33 +425,37 @@ pub async fn save_event(
         .header(USER_AGENT, "rust-minicaldav")
         .header(CONTENT_TYPE, "text/calendar")
         .header(CONTENT_LENGTH, content_length.to_string())
-        .header(AUTHORIZATION, &auth)
+        .header(AUTHORIZATION, &credentials.as_header())
         .body(data)
         .send()
         .await?;
+
+    trace!("CALDAV response: {:#?}", response);
+
+    let response = response.error_for_status()?;
 
     let etag = response
         .headers()
         .get("ETag")
         .map(|etag| etag.to_str().unwrap().to_string());
 
-    let event_ref = EventRef { etag, ..event_ref };
+    let mut new_vcalendar_props = vcalendar_props;
+    new_vcalendar_props.set_etag(etag);
 
-    Ok(event_ref)
+    Ok(new_vcalendar_props)
 }
 
 /// Delete the given event from the CalDAV server.
-pub async fn remove_event(
+pub async fn remove_component(
     client: &Client,
     credentials: &Credentials,
-    event_ref: EventRef,
+    event_url: Url,
 ) -> Result<(), MiniCaldavError> {
-    let auth = get_auth_header(credentials);
 
     let response = client
-        .delete(event_ref.url.as_str())
+        .delete(event_url)
         .header(USER_AGENT, "rust-minicaldav")
-        .header(AUTHORIZATION, &auth)
+        .header(AUTHORIZATION, &credentials.as_header())
         .send()
         .await?;
 
@@ -711,7 +473,7 @@ pub async fn create_calendar(
     name: String,
     color: String,
 ) -> Result<(), MiniCaldavError> {
-    let auth = get_auth_header(credentials);
+    let auth = credentials.as_header();
 
     let principal_url = get_principal_url(client, credentials, base_url.clone())
         .await
@@ -727,6 +489,7 @@ pub async fn create_calendar(
 
     let body = build_create_calendar_xml(name, color);
 
+    trace!("Creating calendar: {}", body);
     let response = client
         .request(mkcol, new_cal_url)
         .header(USER_AGENT, "rust-minicaldav")
@@ -737,7 +500,10 @@ pub async fn create_calendar(
         .send()
         .await?;
 
-    response.error_for_status()?;
+    let response = response.error_for_status();
+    trace!("response.error_for_status(): {:?}", response);
+
+    response?;
 
     Ok(())
 }
@@ -748,7 +514,7 @@ pub async fn remove_calendar(
     base_url: &Url,
     calid: String,
 ) -> Result<(), MiniCaldavError> {
-    let auth = get_auth_header(credentials);
+    let auth = credentials.as_header();
 
     let principal_url = get_principal_url(client, credentials, base_url.clone())
         .await
