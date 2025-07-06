@@ -28,7 +28,7 @@ base64 = { version = "0.13", optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
 reqwest = "0.12.15"
-icalendar = { version = "0.16.15", features = ["serde"], path = "../icalendar" }
+icalendar = { version = "0.17.0", features = ["serde"], git = "https://github.com/jooooscha/icalendar.git", tag = "v0.17.0" }
 simple_logger = "5.0.0"
 
 [dev-dependencies]

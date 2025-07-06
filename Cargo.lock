@@ -512,7 +512,8 @@ dependencies = [
 
 [[package]]
 name = "icalendar"
-version = "0.16.15"
+version = "0.17.0"
+source = "git+https://github.com/jooooscha/icalendar.git?tag=v0.17.0#a184e792f117a812891d2b57ba2330c894ef5a10"
 dependencies = [
  "chrono",
  "iso8601",
