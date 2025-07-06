@@ -8,6 +8,9 @@ pub enum MiniCaldavError {
     CouldNotParseXml(String),
     CouldNotParseTodo(String, String),
     CouldNotParseEvent(String, String),
+    ICalendar(String),
+    NotImplemented,
+    CouldNotSerialize(String),
 }
 
 impl From<url::ParseError> for MiniCaldavError {
@@ -25,5 +28,11 @@ impl From<reqwest::Error> for MiniCaldavError {
 impl From<xmltree::ParseError> for MiniCaldavError {
     fn from(e: xmltree::ParseError) -> Self {
         Self::CouldNotParseXml(e.to_string())
+    }
+}
+
+impl From<std::fmt::Error> for MiniCaldavError {
+    fn from(e: std::fmt::Error) -> Self {
+        Self::CouldNotSerialize(e.to_string())
     }
 }
